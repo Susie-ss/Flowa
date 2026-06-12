@@ -1,0 +1,217 @@
+// router.js - 前端路径路由系统 (HTML5 History API)
+const routes = {};
+let currentRoute = null;
+let currentParams = {};
+
+function registerRoute(path, handler) {
+  routes[path] = handler;
+}
+
+// 解析路径路由
+function parseRoute() {
+  var path = window.location.pathname;
+  if (path === '/') return { route: 'home', params: {} };
+  
+  var parts = path.split('/').filter(Boolean);
+  
+  if (path === '/login')      return { route: 'login', params: {} };
+  if (path === '/register')   return { route: 'register', params: {} };
+  if (path === '/products')   return { route: 'products', params: {} };
+  if (path === '/projects')   return { route: 'projects', params: {} };
+  
+  if (parts[0] === 'share' && parts[1]) return { route: 'share', params: { token: parts[1] } };
+  
+  return { route: 'home', params: {} };
+}
+
+// 路由导航
+function navigateTo(route, params) {
+  params = params || {};
+  var url = '';
+  
+  switch (route) {
+    case 'home':         url = '/'; break;
+    case 'products':     url = '/products'; break;
+    case 'projects':     url = '/projects'; break;
+    case 'project-detail':
+      window.open('/preview.html?project=' + params.id, '_blank');
+      return;
+    case 'share':        url = '/share/' + params.token; break;
+    case 'login':        url = '/login'; break;
+    case 'register':     url = '/register'; break;
+    default:             url = '/'; break;
+  }
+  
+  history.pushState(null, '', url);
+  renderRoute();
+}
+
+// 渲染页面
+async function renderRoute() {
+  var parsed = parseRoute();
+  var route = parsed.route;
+  var params = parsed.params;
+  currentRoute = route;
+  currentParams = params;
+  
+  var mainContent = document.getElementById('main-content');
+  var authContainer = document.getElementById('auth-container');
+  var header = document.getElementById('header');
+  var layout = document.getElementById('main-layout');
+  var sidebar = document.getElementById('sidebar');
+  
+  if (mainContent) {
+    mainContent.style.padding = '';
+    mainContent.style.height = '';
+  }
+  
+  // ===== 公开路由 =====
+  if (route === 'login' || route === 'register') {
+    if (isLoggedIn()) {
+      navigateTo('products');
+      return;
+    }
+    if (header) header.style.display = 'none';
+    if (layout) layout.style.display = 'none';
+    if (authContainer) authContainer.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'none';
+    
+    if (route === 'login') renderLoginPage(authContainer);
+    else renderRegisterPage(authContainer);
+    return;
+  }
+  
+  if (route === 'share') {
+    if (header) header.style.display = 'none';
+    if (sidebar) sidebar.style.display = 'none';
+    if (layout) { layout.style.display = 'flex'; layout.style.marginTop = '0'; }
+    if (authContainer) authContainer.style.display = 'none';
+    document.body.style.height = '100vh';
+    document.body.style.margin = '0';
+    if (mainContent) { mainContent.style.padding = '0'; mainContent.style.overflow = 'hidden'; }
+    await renderSharePage(mainContent, params.token);
+    return;
+  }
+  
+  // ===== 需要登录 =====
+  if (!isLoggedIn()) {
+    navigateTo('login');
+    return;
+  }
+  
+  if (authContainer) authContainer.style.display = 'none';
+  if (header) header.style.display = 'flex';
+  if (layout) { layout.style.display = 'flex'; layout.style.marginTop = ''; }
+  if (sidebar) sidebar.style.display = '';
+  if (mainContent) { mainContent.style.padding = ''; mainContent.style.overflow = ''; }
+  document.body.style.height = '';
+  document.body.style.margin = '';
+  
+  updateSidebarActive(route);
+  
+  if (route === 'home') {
+    if (typeof renderHomePage === 'function') renderHomePage();
+  } else if (route === 'products') {
+    if (typeof renderProductsPage === 'function') renderProductsPage();
+  } else if (route === 'projects') {
+    if (typeof renderProjectsPage === 'function') renderProjectsPage();
+  }
+}
+
+function updateSidebarActive(route) {
+  document.querySelectorAll('.sidebar-item').forEach(function(item) {
+    var r = item.getAttribute('data-page');
+    if (r === route) item.classList.add('active');
+    else item.classList.remove('active');
+  });
+}
+
+// Render login/register pages
+function renderLoginPage(container) {
+  container.innerHTML = '<div class="auth-layout"><div class="auth-banner"><div class="auth-banner-logo"><img src="/favicon.png" style="width:56px;height:56px" /></div><h1>Framo</h1><p>高效管理 Axure 原型，团队协作更顺畅</p><ul class="auth-banner-features"><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#upload-one"/></svg></span>一键上传，即时预览</li><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#tree-list"/></svg></span>页面结构树，清晰导航</li><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#share"/></svg></span>安全分享，权限可控</li><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#people"/></svg></span>团队协作，高效沟通</li></ul></div><div class="auth-form-side"><div class="auth-card"><h2>欢迎回来</h2><p class="auth-subtitle">登录到Framo</p><div class="form-row"><label>用户名</label><input type="text" id="login-username" placeholder="请输入用户名" /></div><div class="form-row"><label>密码</label><input type="password" id="login-password" placeholder="请输入密码" /></div><div class="auth-error-text" id="login-error-text"></div><button class="btn btn-primary" onclick="doLogin()">登录</button><div class="auth-footer-link">没有账号？<a href="/register">立即注册</a></div></div></div></div>';
+}
+
+function renderRegisterPage(container) {
+  container.innerHTML = '<div class="auth-layout"><div class="auth-banner"><div class="auth-banner-logo"><img src="/favicon.png" style="width:56px;height:56px" /></div><h1>Framo</h1><p>高效管理 Axure 原型，团队协作更顺畅</p><ul class="auth-banner-features"><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#upload-one"/></svg></span>一键上传，即时预览</li><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#tree-list"/></svg></span>页面结构树，清晰导航</li><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#share"/></svg></span>安全分享，权限可控</li><li><span class="feature-icon"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#people"/></svg></span>团队协作，高效沟通</li></ul></div><div class="auth-form-side"><div class="auth-card"><h2>创建账号</h2><p class="auth-subtitle">注册Framo账号</p><div class="form-row"><label>用户名</label><input type="text" id="register-username" placeholder="至少3位" /></div><div class="form-row"><label>密码</label><input type="password" id="register-password" placeholder="至少6位" /></div><div class="auth-error-text" id="register-error-text"></div><button class="btn btn-primary" onclick="doRegister()">注册</button><div class="auth-footer-link">已有账号？<a href="/login">立即登录</a></div></div></div></div>';
+}
+
+// Render share page
+async function renderSharePage(container, token) {
+  Object.assign(container.style, {
+    display: 'flex', flexDirection: 'column',
+    flex: '1', overflow: 'hidden',
+    padding: '0', margin: '0'
+  });
+
+  var viewer = document.createElement('div');
+  viewer.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+  viewer.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">加载中...</div>';
+  container.innerHTML = '';
+  container.appendChild(viewer);
+
+  // Extract password from URL query (e.g. /share/TOKEN?pwd=XXXX)
+  var hashPwd = '';
+  var qs = window.location.search;
+  var m = qs.match(/[?&]pwd=([^&]*)/);
+  if (m) hashPwd = decodeURIComponent(m[1]);
+
+  async function loadShare(pwd) {
+    var url = '/api/share/' + token;
+    if (pwd) url += '?pwd=' + encodeURIComponent(pwd);
+    try {
+      var result = await api.get(url);
+      if (result.success) {
+        viewer.innerHTML = '';
+        renderViewer({ container: viewer, projectId: result.project.id, mode: 'share', shareToken: token });
+        return true;
+      }
+      if (result.needPassword) {
+        showPasswordPrompt(pwd);
+        return false;
+      }
+      viewer.innerHTML = '<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;opacity:.5"><svg class="iconpark" style="width:48px;height:48px"><use href="/libs/iconpark/sprite.svg#lock"/></svg></div><h3 style="margin-bottom:8px">访问受限</h3><p style="color:var(--text-secondary)">此分享链接无效或已失效</p></div>';
+      return false;
+    } catch (err) {
+      viewer.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">加载失败</div>';
+      return false;
+    }
+  }
+
+  function showPasswordPrompt(wrongPwd) {
+    viewer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%"><div style="background:var(--surface);border-radius:12px;padding:40px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.12);width:360px;max-width:90vw"><div style="font-size:40px;margin-bottom:16px"><i class="iconpark" style="width:40px;height:40px;color:var(--primary)"><use href="/libs/iconpark/sprite.svg#lock"/></svg></div><h3 style="margin:0 0 8px;font-size:18px">需要密码访问</h3><p style="color:var(--text-muted);font-size:13px;margin:0 0 24px">此分享链接已加密，请输入密码查看</p><div style="display:flex;gap:8px"><input type="text" id="pwd-input" placeholder="输入4位密码" maxlength="4" style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;text-align:center" onkeydown="if(event.key===\'Enter\')submitSharePwd()"><button onclick="submitSharePwd()" style="padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">确认</button></div>' + (wrongPwd ? '<p style="color:#EF4444;font-size:12px;margin:12px 0 0">密码错误，请重试</p>' : '') + '</div></div>';
+
+    window.submitSharePwd = function() {
+      var inp = document.getElementById('pwd-input');
+      var pwd = inp ? inp.value.trim() : '';
+      if (!pwd) return;
+      // Update URL with password so it can be shared
+      var newUrl = '/share/' + token + '?pwd=' + encodeURIComponent(pwd);
+      history.replaceState(null, '', newUrl);
+      loadShare(pwd);
+    };
+  }
+
+  loadShare(hashPwd);
+}
+
+// Event listeners
+window.addEventListener('popstate', renderRoute);
+window.addEventListener('load', renderRoute);
+
+// Handle clicks on internal links to prevent full page reload
+document.addEventListener('click', function(e) {
+  var link = e.target.closest('a');
+  if (!link) return;
+  var href = link.getAttribute('href');
+  if (!href) return;
+  // Only intercept internal navigation links (not #, not external)
+  if (href.startsWith('/') && !href.startsWith('/api/') && !href.startsWith('/preview.html')) {
+    e.preventDefault();
+    history.pushState(null, '', href);
+    renderRoute();
+  }
+});
+
+// Exports
+window.navigateTo = navigateTo;
+window.renderRoute = renderRoute;

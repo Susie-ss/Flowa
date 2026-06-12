@@ -40,3 +40,5 @@ tests/
 # Token/密钥
 token.json
 cookies.txt
+.vercel
+.env*

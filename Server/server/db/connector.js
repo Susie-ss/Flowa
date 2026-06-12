@@ -1,5 +1,5 @@
 // 数据库抽象层入口
-// 根据配置切换 SQLite / MySQL / SQL Server
+// 自动检测环境：Vercel (DATABASE_URL) → PostgreSQL，本地 → SQLite
 
 const path = require('path');
 const fs = require('fs');
@@ -21,17 +21,24 @@ function loadEnv() {
 
 loadEnv();
 
-// 默认使用 SQLite
-const dbType = process.env.DB_TYPE || 'sqlite';
+// 自动检测：如果有 DATABASE_URL（Vercel Postgres/Neon），使用 PostgreSQL
+// 否则 fallback 到 SQLite
+const hasPgUrl = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL);
+const dbType = process.env.DB_TYPE || (hasPgUrl ? 'postgres' : 'sqlite');
 
 let dbImpl;
-if (dbType === 'sqlite') {
+if (dbType === 'postgres') {
+  console.log('[DB] Using PostgreSQL adapter');
+  dbImpl = require('./postgres');
+} else if (dbType === 'sqlite') {
+  console.log('[DB] Using SQLite adapter');
   dbImpl = require('./sqlite');
 } else if (dbType === 'mysql') {
   dbImpl = require('./mysql');
 } else if (dbType === 'sqlserver') {
   dbImpl = require('./sqlserver');
 } else {
+  console.log('[DB] Fallback to SQLite adapter');
   dbImpl = require('./sqlite');
 }
 

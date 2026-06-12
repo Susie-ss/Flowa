@@ -7,11 +7,11 @@ const logger = require('../db/logger');
 
 // 安全地获取 projects 表列名（兼容未迁移的旧数据库）
 var _safeProjCols = null;
-function getSafeProjectCols() {
+async function getSafeProjectCols() {
   if (_safeProjCols) return _safeProjCols;
   var base = 'p.id, p.name, p.owner_id, p.share_token, p.share_permission, p.pages_json, p.version_num, p.color, p.created_at, p.updated_at';
   try {
-    var cols = db.all('PRAGMA table_info(projects)');
+    var cols = await db.all('PRAGMA table_info(projects)');
     var names = cols.map(function(c) { return c.name; });
     if (names.indexOf('share_password') >= 0) base += ', p.share_password';
     if (names.indexOf('share_expiry_days') >= 0) base += ', p.share_expiry_days';
@@ -34,7 +34,7 @@ router.get('/:id', async (req, res) => {
       if (token) {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
-        const user = db.get('SELECT id, username FROM users WHERE id = ?', [decoded.userId]);
+        const user = await db.get('SELECT id, username FROM users WHERE id = ?', [decoded.userId]);
         if (user) {
           currentUserId = user.id;
           req.user = { userId: user.id, username: user.username };
@@ -45,8 +45,8 @@ router.get('/:id', async (req, res) => {
     }
 
     // 查询项目（检查权限）
-    const project = db.get(`
-      SELECT ${getSafeProjectCols()}, u.username as owner_name
+    const project = await db.get(`
+      SELECT ${await getSafeProjectCols()}, u.username as owner_name
       FROM projects p
       LEFT JOIN users u ON p.owner_id = u.id
       WHERE p.id = ?
@@ -61,7 +61,7 @@ router.get('/:id', async (req, res) => {
         permission = 'owner';
       } else {
         // 检查是否是协作成员
-        const member = db.get(
+        const member = await db.get(
           'SELECT id FROM project_members WHERE project_id = ? AND user_id = ?',
           [req.params.id, currentUserId]
         );
@@ -84,7 +84,7 @@ router.get('/:id', async (req, res) => {
     }
 
     // 关联产品线
-    project.productLines = db.all(`
+    project.productLines = await db.all(`
       SELECT pl.* FROM product_lines pl
       INNER JOIN project_product_lines ppl ON pl.id = ppl.product_line_id
       WHERE ppl.project_id = ? AND ppl.user_id = ?
@@ -119,7 +119,7 @@ router.get('/:id/pages', async (req, res) => {
       if (token) {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
-        const user = db.get('SELECT id FROM users WHERE id = ?', [decoded.userId]);
+        const user = await db.get('SELECT id FROM users WHERE id = ?', [decoded.userId]);
         if (user) {
           currentUserId = user.id;
           req.user = { userId: user.id };
@@ -127,7 +127,7 @@ router.get('/:id/pages', async (req, res) => {
       }
     } catch (e) {}
 
-    const project = db.get(
+    const project = await db.get(
       'SELECT id, owner_id, share_token, share_permission, pages_json FROM projects WHERE id = ?',
       [req.params.id]
     );
@@ -138,7 +138,7 @@ router.get('/:id/pages', async (req, res) => {
       if (project.owner_id === currentUserId) {
         permission = 'owner';
       } else {
-        const member = db.get(
+        const member = await db.get(
           'SELECT id FROM project_members WHERE project_id = ? AND user_id = ?',
           [req.params.id, currentUserId]
         );
@@ -172,7 +172,7 @@ router.get('/:id/pages', async (req, res) => {
 router.use(authMiddleware);
 
 // 获取项目列表（支持按产品线过滤、搜索）
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { productLineId, search } = req.query;
   let sqlStr = `
     SELECT p.*, u.username as owner_name
@@ -184,7 +184,7 @@ router.get('/', (req, res) => {
 
   if (productLineId) {
     sqlStr = `
-      SELECT ${getSafeProjectCols()}, u.username as owner_name
+      SELECT ${await getSafeProjectCols()}, u.username as owner_name
       FROM projects p
       LEFT JOIN users u ON p.owner_id = u.id
       INNER JOIN project_product_lines ppl ON p.id = ppl.project_id
@@ -201,10 +201,10 @@ router.get('/', (req, res) => {
   sqlStr += ` ORDER BY p.updated_at DESC`;
   
   try {
-    const projects = db.all(sqlStr, params);
+    const projects = await db.all(sqlStr, params);
     // 为每个项目加载关联的产品线和版本
-    projects.forEach(p => {
-      p.productLines = db.all(`
+    for (const p of projects) {
+      p.productLines = await db.all(`
         SELECT pl.* FROM product_lines pl
         INNER JOIN project_product_lines ppl ON pl.id = ppl.product_line_id
         WHERE ppl.project_id = ?
@@ -216,7 +216,7 @@ router.get('/', (req, res) => {
       } else {
         p.pages = [];
       }
-    });
+    }
     res.json({ success: true, data: projects });
   } catch (e) {
     res.status(500).json({ error: '查询失败：' + e.message });
@@ -224,12 +224,12 @@ router.get('/', (req, res) => {
 });
 
 // 新建项目
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { name, color } = req.body;
   if (!name) return res.status(400).json({ error: '项目名称不能为空' });
   
   // 检查是否已存在同名项目（同一用户）
-  const existing = db.get('SELECT id FROM projects WHERE name = ? AND owner_id = ?', [name, req.user.userId]);
+  const existing = await db.get('SELECT id FROM projects WHERE name = ? AND owner_id = ?', [name, req.user.userId]);
   if (existing) {
     return res.status(409).json({ error: '已存在同名项目' });
   }
@@ -238,7 +238,7 @@ router.post('/', (req, res) => {
   const projectColor = color || '#5B5EF4';
   try {
     const projectId = db.generateId();
-    db.run(
+    await db.run(
       'INSERT INTO projects (id, name, owner_id, share_token, share_permission, color, pages_json, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, NULL, ?, ?)',
       [projectId, name, req.user.userId, shareToken, projectColor, Math.floor(Date.now()/1000), Math.floor(Date.now()/1000)]
     );
@@ -251,10 +251,10 @@ router.post('/', (req, res) => {
 });
 
 // 获取项目详情
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const project = db.get(`
-      SELECT ${getSafeProjectCols()}, u.username as owner_name
+    const project = await db.get(`
+      SELECT ${await getSafeProjectCols()}, u.username as owner_name
       FROM projects p
       LEFT JOIN users u ON p.owner_id = u.id
       WHERE p.id = ? AND (p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?))
@@ -263,7 +263,7 @@ router.get('/:id', (req, res) => {
     if (!project) return res.status(404).json({ error: '项目不存在或无权访问' });
     
     // 关联产品线
-    project.productLines = db.all(`
+    project.productLines = await db.all(`
       SELECT pl.* FROM product_lines pl
       INNER JOIN project_product_lines ppl ON pl.id = ppl.product_line_id
       WHERE ppl.project_id = ? AND ppl.user_id = ?
@@ -288,37 +288,37 @@ router.get('/:id', (req, res) => {
 });
 
 // 更新项目
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const { name, productLineIds, color } = req.body;
   if (!name) return res.status(400).json({ error: '项目名称不能为空' });
   
   try {
     // 检查权限
-    const project = db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以编辑项目' });
     }
     
     if (color) {
-      db.run(
+      await db.run(
         'UPDATE projects SET name = ?, color = ?, updated_at = ? WHERE id = ?',
         [name, color, Math.floor(Date.now()/1000), req.params.id]
       );
     } else {
-      db.run(
+      await db.run(
         'UPDATE projects SET name = ?, updated_at = ? WHERE id = ?',
         [name, Math.floor(Date.now()/1000), req.params.id]
       );
     }
     
     // 更新产品线关联（只删除当前用户的，再插入新的）
-    db.run('DELETE FROM project_product_lines WHERE project_id = ? AND user_id = ?', [req.params.id, req.user.userId]);
+    await db.run('DELETE FROM project_product_lines WHERE project_id = ? AND user_id = ?', [req.params.id, req.user.userId]);
     if (Array.isArray(productLineIds)) {
-      productLineIds.forEach(lineId => {
+      for (const lineId of productLineIds) {
         const relId = db.generateId();
-        db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, lineId, req.user.userId]);
-      });
+        await db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, lineId, req.user.userId]);
+      }
     }
     
     res.json({ success: true });
@@ -330,20 +330,20 @@ router.put('/:id', (req, res) => {
 });
 
 // 设置分享权限
-router.put('/:id/share-permission', (req, res) => {
+router.put('/:id/share-permission', async (req, res) => {
   const sharePermission = req.body.share_permission;
   const sharePassword = req.body.share_password || null;
   const shareExpiryDays = req.body.share_expiry_days || null;
   const newValue = sharePermission ? 1 : 0;
   try {
-    const project = db.get('SELECT owner_id, share_permission FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id, share_permission FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以设置权限' });
     }
     
     // 检测新列是否存在
-    var cols = db.all('PRAGMA table_info(projects)');
+    var cols = await db.all('PRAGMA table_info(projects)');
     var colNames = cols.map(function(c) { return c.name; });
     var hasPasswordCol = colNames.indexOf('share_password') >= 0;
     var hasExpiryCol = colNames.indexOf('share_expiry_days') >= 0;
@@ -361,7 +361,7 @@ router.put('/:id/share-permission', (req, res) => {
       if (hasExpiryCol) { closeSQL += ', share_expiry_days = NULL'; }
       closeSQL += ' WHERE id = ?';
       closeParams.push(req.params.id);
-      db.run(closeSQL, closeParams);
+      await db.run(closeSQL, closeParams);
     } else {
       var updateSQL = 'UPDATE projects SET share_permission = ?, updated_at = ?';
       var updateParams = [newValue, Math.floor(Date.now()/1000)];
@@ -369,7 +369,7 @@ router.put('/:id/share-permission', (req, res) => {
       if (hasExpiryCol) { updateSQL += ', share_expiry_days = ?'; updateParams.push(shareExpiryDays); }
       updateSQL += ' WHERE id = ?';
       updateParams.push(req.params.id);
-      db.run(updateSQL, updateParams);
+      await db.run(updateSQL, updateParams);
     }
     
     const result = { success: true };
@@ -386,23 +386,23 @@ router.put('/:id/share-permission', (req, res) => {
 });
 
 // 删除项目（硬删除 + 清理 previewCache）
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const fs = require('fs');
   const path = require('path');
   
   try {
-    const project = db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以删除项目' });
     }
     
     // 代码层清理：删除关联表记录（数据库级联删除作为备份）
-    db.run('DELETE FROM project_product_lines WHERE project_id = ?', [req.params.id]);
-    db.run('DELETE FROM project_members WHERE project_id = ?', [req.params.id]);
+    await db.run('DELETE FROM project_product_lines WHERE project_id = ?', [req.params.id]);
+    await db.run('DELETE FROM project_members WHERE project_id = ?', [req.params.id]);
     
     // 删除项目记录
-    db.run('DELETE FROM projects WHERE id = ?', [req.params.id]);
+    await db.run('DELETE FROM projects WHERE id = ?', [req.params.id]);
     
     // 清理 previewCache 目录
     const cacheDir = path.join(__dirname, '..', '..', 'previewCache', 'projects', req.params.id);
@@ -419,9 +419,9 @@ router.delete('/:id', (req, res) => {
 });
 
 // 获取项目页面树
-router.get('/:id/pages', (req, res) => {
+router.get('/:id/pages', async (req, res) => {
   try {
-    const project = db.get(
+    const project = await db.get(
       'SELECT pages_json, share_token, share_permission FROM projects WHERE id = ? AND (owner_id = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?))',
       [req.params.id, req.user.userId, req.user.userId]
     );
@@ -439,15 +439,15 @@ router.get('/:id/pages', (req, res) => {
 });
 
 // 获取项目成员列表（仅项目创建者）
-router.get('/:id/members', (req, res) => {
+router.get('/:id/members', async (req, res) => {
   try {
-    const project = db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以查看成员' });
     }
     
-    const members = db.all(`
+    const members = await db.all(`
       SELECT pm.*, u.username
       FROM project_members pm
       JOIN users u ON pm.user_id = u.id
@@ -462,19 +462,19 @@ router.get('/:id/members', (req, res) => {
 });
 
 // 邀请协作（添加成员）
-router.post('/:id/members', (req, res) => {
+router.post('/:id/members', async (req, res) => {
   const { username } = req.body;
   if (!username) return res.status(400).json({ error: '用户名不能为空' });
   
   try {
-    const project = db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以邀请协作' });
     }
     
     // 查找用户
-    const user = db.get('SELECT id FROM users WHERE username = ?', [username]);
+    const user = await db.get('SELECT id FROM users WHERE username = ?', [username]);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     
     // 不能邀请自己
@@ -483,7 +483,7 @@ router.post('/:id/members', (req, res) => {
     }
     
     // 检查是否已存在
-    const existing = db.get(
+    const existing = await db.get(
       'SELECT id FROM project_members WHERE project_id = ? AND user_id = ?',
       [req.params.id, user.id]
     );
@@ -491,7 +491,7 @@ router.post('/:id/members', (req, res) => {
     
     // 添加成员
     const relId = db.generateId();
-    db.run(
+    await db.run(
       'INSERT INTO project_members (id, project_id, user_id, invited_by, invited_at) VALUES (?, ?, ?, ?, ?)',
       [relId, req.params.id, user.id, req.user.userId, Math.floor(Date.now()/1000)]
     );
@@ -504,9 +504,9 @@ router.post('/:id/members', (req, res) => {
 });
 
 // 移除协作成员
-router.delete('/:id/members/:userId', (req, res) => {
+router.delete('/:id/members/:userId', async (req, res) => {
   try {
-    const project = db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以移除成员' });
@@ -517,7 +517,7 @@ router.delete('/:id/members/:userId', (req, res) => {
       return res.status(400).json({ error: '不能移除项目创建者' });
     }
     
-    db.run('DELETE FROM project_members WHERE project_id = ? AND user_id = ?', [
+    await db.run('DELETE FROM project_members WHERE project_id = ? AND user_id = ?', [
       req.params.id,
       req.params.userId
     ]);
@@ -530,24 +530,24 @@ router.delete('/:id/members/:userId', (req, res) => {
 });
 
 // 批量设置项目标签（替换所有标签）
-router.put('/:id/tags', (req, res) => {
+router.put('/:id/tags', async (req, res) => {
   const { tagIds } = req.body;
   try {
-    const project = db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
+    const project = await db.get('SELECT owner_id FROM projects WHERE id = ?', [req.params.id]);
     if (!project) return res.status(404).json({ error: '项目不存在' });
     if (project.owner_id !== req.user.userId) {
       return res.status(403).json({ error: '只有项目创建者可以设置标签' });
     }
     
     // 清除当前用户对此项目的所有标签关联
-    db.run('DELETE FROM project_product_lines WHERE project_id = ? AND user_id = ?', [req.params.id, req.user.userId]);
+    await db.run('DELETE FROM project_product_lines WHERE project_id = ? AND user_id = ?', [req.params.id, req.user.userId]);
     
     // 插入新标签
     if (Array.isArray(tagIds) && tagIds.length > 0) {
-      tagIds.forEach(tagId => {
+      for (const tagId of tagIds) {
         const relId = db.generateId();
-        db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, tagId, req.user.userId]);
-      });
+        await db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, tagId, req.user.userId]);
+      }
     }
     
     res.json({ success: true });

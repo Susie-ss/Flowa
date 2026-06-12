@@ -2,7 +2,7 @@ const config = require('../config');
 const jwt = require('jsonwebtoken');
 
 // JWT 认证中间件
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
     return res.status(401).json({ error: '缺少认证 token' });
@@ -21,7 +21,7 @@ function authMiddleware(req, res, next) {
 }
 
 // 可选认证中间件（用于分享链接访问，有 token 就解析，没有就匿名）
-function optionalAuthMiddleware(req, res, next) {
+async function optionalAuthMiddleware(req, res, next) {
   // 1. 检查 Authorization header
   const authHeader = req.headers['authorization'];
   if (authHeader) {

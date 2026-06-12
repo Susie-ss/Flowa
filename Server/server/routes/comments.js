@@ -9,13 +9,13 @@ const crypto = require('crypto');
 // ===== 评论功能 =====
 
 // 获取项目评论（按页面过滤可选）
-router.get('/api/projects/:id/comments', authMiddleware, (req, res) => {
+router.get('/api/projects/:id/comments', authMiddleware, async (req, res) => {
   try {
     const projectId = req.params.id;
     const pagePath = req.query.page || null;
 
     // 检查权限
-    const project = db.get(
+    const project = await db.get(
       'SELECT id, owner_id FROM projects WHERE id = ? AND (owner_id = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?))',
       [projectId, req.user.userId, req.user.userId]
     );
@@ -36,7 +36,7 @@ router.get('/api/projects/:id/comments', authMiddleware, (req, res) => {
     }
     sql += ' ORDER BY c.created_at ASC';
 
-    const comments = db.all(sql, params);
+    const comments = await db.all(sql, params);
     res.json({ success: true, data: comments });
   } catch (e) {
     res.status(500).json({ error: '查询失败：' + e.message });
@@ -44,7 +44,7 @@ router.get('/api/projects/:id/comments', authMiddleware, (req, res) => {
 });
 
 // 添加评论
-router.post('/api/projects/:id/comments', authMiddleware, rateLimit('comment'), (req, res) => {
+router.post('/api/projects/:id/comments', authMiddleware, rateLimit('comment'), async (req, res) => {
   try {
     const projectId = req.params.id;
     const { page_path, content, parent_id, version_num } = req.body;
@@ -52,7 +52,7 @@ router.post('/api/projects/:id/comments', authMiddleware, rateLimit('comment'), 
     if (!content) return res.status(400).json({ error: '评论内容不能为空' });
 
     // 检查权限
-    const project = db.get(
+    const project = await db.get(
       'SELECT id, pages_json FROM projects WHERE id = ? AND (owner_id = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?))',
       [projectId, req.user.userId, req.user.userId]
     );
@@ -63,18 +63,18 @@ router.post('/api/projects/:id/comments', authMiddleware, rateLimit('comment'), 
 
     // 如为回复，检查父评论是否存在
     if (parent_id) {
-      const parent = db.get('SELECT id, user_id FROM comments WHERE id = ?', [parent_id]);
+      const parent = await db.get('SELECT id, user_id FROM comments WHERE id = ?', [parent_id]);
       if (!parent) return res.status(404).json({ error: '父评论不存在' });
     }
 
     const id = db.generateId();
     const now = Math.floor(Date.now() / 1000);
-    db.run(
+    await db.run(
       'INSERT INTO comments (id, project_id, user_id, page_path, content, parent_id, version_num, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [id, projectId, req.user.userId, page_path || '', content, parent_id || null, version_num || 1, now]
     );
 
-    const comment = db.get(
+    const comment = await db.get(
       'SELECT c.*, u.username, (SELECT avatar_data FROM user_avatars WHERE user_id = c.user_id) as avatar FROM comments c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?',
       [id]
     );
@@ -93,7 +93,7 @@ const avatarUpload = multer({
 });
 
 // 上传头像
-router.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), (req, res) => {
+router.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '未收到图片文件' });
 
@@ -115,7 +115,7 @@ router.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), 
     }
 
     const now = Math.floor(Date.now() / 1000);
-    db.run(
+    await db.run(
       'INSERT OR REPLACE INTO user_avatars (user_id, avatar_data, updated_at) VALUES (?, ?, ?)',
       [req.user.userId, base64, now]
     );
@@ -127,9 +127,9 @@ router.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), 
 });
 
 // 获取头像
-router.get('/api/users/avatar/:userId', (req, res) => {
+router.get('/api/users/avatar/:userId', async (req, res) => {
   try {
-    const avatar = db.get('SELECT avatar_data FROM user_avatars WHERE user_id = ?', [req.params.userId]);
+    const avatar = await db.get('SELECT avatar_data FROM user_avatars WHERE user_id = ?', [req.params.userId]);
     if (!avatar || !avatar.avatar_data) {
       return res.status(404).json({ error: '无头像' });
     }
@@ -151,13 +151,13 @@ router.get('/api/users/avatar/:userId', (req, res) => {
 });
 
 // ===== 首页统计 =====
-router.get('/api/stats', authMiddleware, (req, res) => {
+router.get('/api/stats', authMiddleware, async (req, res) => {
   try {
-    const tagCount = db.get(
+    const tagCount = await db.get(
       'SELECT COUNT(*) as count FROM product_lines WHERE (owner_id = ? OR id IN (SELECT DISTINCT ppl.product_line_id FROM project_product_lines ppl JOIN projects p ON ppl.project_id = p.id WHERE ppl.user_id = ? AND (p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?))))',
       [req.user.userId, req.user.userId, req.user.userId, req.user.userId]
     );
-    const projectCount = db.get(
+    const projectCount = await db.get(
       'SELECT COUNT(*) as count FROM projects WHERE owner_id = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?)',
       [req.user.userId, req.user.userId]
     );
@@ -169,32 +169,32 @@ router.get('/api/stats', authMiddleware, (req, res) => {
     monday.setDate(now.getDate() - dayOfWeek + 1);
     monday.setHours(0,0,0,0);
     const weekStart = Math.floor(monday.getTime() / 1000);
-    const thisWeekCount = db.get(
+    const thisWeekCount = await db.get(
       'SELECT COUNT(*) as count FROM projects WHERE (owner_id = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ?)) AND created_at >= ?',
       [req.user.userId, req.user.userId, weekStart]
     );
     
     // 总评论数
-    const totalCommentCount = db.get(
+    const totalCommentCount = await db.get(
       'SELECT COUNT(*) as count FROM comments c INNER JOIN projects p ON c.project_id = p.id WHERE p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)',
       [req.user.userId, req.user.userId]
     );
     
     // 最新评论时间
-    const latestComment = db.get(
+    const latestComment = await db.get(
       'SELECT MAX(c.created_at) as latest FROM comments c INNER JOIN projects p ON c.project_id = p.id WHERE p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)',
       [req.user.userId, req.user.userId]
     );
 
     // 最近项目
-    const recentProjects = db.all(
+    const recentProjects = await db.all(
       'SELECT p.*, u.username as owner_name FROM projects p LEFT JOIN users u ON p.owner_id = u.id WHERE p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?) ORDER BY p.updated_at DESC LIMIT 6',
       [req.user.userId, req.user.userId]
     );
     
     // 为最近项目加载标签
     for (const p of recentProjects) {
-      p.productLines = db.all(`
+      p.productLines = await db.all(`
         SELECT pl.* FROM product_lines pl
         INNER JOIN project_product_lines ppl ON pl.id = ppl.product_line_id
         WHERE ppl.project_id = ? AND ppl.user_id = ?
@@ -219,18 +219,18 @@ router.get('/api/stats', authMiddleware, (req, res) => {
 });
 
 // 评论计数（按页面分组）
-router.get('/api/projects/:id/comment-counts', authMiddleware, (req, res) => {
+router.get('/api/projects/:id/comment-counts', authMiddleware, async (req, res) => {
   try {
-    const counts = db.all('SELECT page_path, COUNT(*) as count FROM comments WHERE project_id = ? GROUP BY page_path', [req.params.id]);
+    const counts = await db.all('SELECT page_path, COUNT(*) as count FROM comments WHERE project_id = ? GROUP BY page_path', [req.params.id]);
     res.json({ success: true, data: counts });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ===== 通知 =====
-router.get('/api/notifications', authMiddleware, (req, res) => {
+router.get('/api/notifications', authMiddleware, async (req, res) => {
   try {
     // 查找用户参与的评论中，被他人回复的（parent_id 指向用户评论的）
-    const replies = db.all(`
+    const replies = await db.all(`
       SELECT c2.*, c1.page_path, c1.content as replied_content,
         p.name as project_name, u.username as reply_user,
         (SELECT avatar_data FROM user_avatars WHERE user_id = c2.user_id) as avatar
@@ -251,21 +251,23 @@ router.get('/api/notifications', authMiddleware, (req, res) => {
 });
 
 // ===== 版本号递增（在 upload 中调用）=====
-function incrementVersion(projectId) {
-  const project = db.get('SELECT version_num FROM projects WHERE id = ?', [projectId]);
+async function incrementVersion(projectId) {
+  const project = await db.get('SELECT version_num FROM projects WHERE id = ?', [projectId]);
   const newVersion = (project?.version_num || 0) + 1;
-  db.run('UPDATE projects SET version_num = ?, updated_at = ? WHERE id = ?',
+  await db.run('UPDATE projects SET version_num = ?, updated_at = ? WHERE id = ?',
     [newVersion, Math.floor(Date.now() / 1000), projectId]);
   return newVersion;
 }
 
 // 记录版本
-function recordVersion(projectId, versionNum, pagesJson) {
+async function recordVersion(projectId, versionNum, pagesJson) {
   const id = db.generateId();
   const now = Math.floor(Date.now() / 1000);
-  db.run('INSERT INTO project_versions (id, project_id, version_num, pages_json, created_at) VALUES (?, ?, ?, ?, ?)',
+  await db.run('INSERT INTO project_versions (id, project_id, version_num, pages_json, created_at) VALUES (?, ?, ?, ?, ?)',
     [id, projectId, versionNum, pagesJson, now]);
   return { id, versionNum };
 }
 
-module.exports = { router, incrementVersion, recordVersion };
+module.exports = router;
+module.exports.incrementVersion = incrementVersion;
+module.exports.recordVersion = recordVersion;

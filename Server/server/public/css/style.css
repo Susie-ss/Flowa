@@ -1143,7 +1143,7 @@ button {
   background: rgba(0,0,0,.4);
   backdrop-filter: blur(4px);
   z-index: 500;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   opacity: 0;
@@ -1152,6 +1152,7 @@ button {
 }
 
 .modal-overlay.active {
+  display: flex;
   opacity: 1;
   pointer-events: all;
 }

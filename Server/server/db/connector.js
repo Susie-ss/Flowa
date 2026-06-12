@@ -4,7 +4,7 @@
 const path = require('path');
 const fs = require('fs');
 
-// 读取 .env
+// 读取 .env（本地开发用）
 function loadEnv() {
   const envPath = path.join(__dirname, '..', '.env');
   if (!fs.existsSync(envPath)) return;
@@ -21,8 +21,7 @@ function loadEnv() {
 
 loadEnv();
 
-// 自动检测：如果有 DATABASE_URL（Vercel Postgres/Neon），使用 PostgreSQL
-// 否则 fallback 到 SQLite
+// 自动检测：如果有 DATABASE_URL 或 POSTGRES_URL（Vercel/Neon），使用 PostgreSQL
 const hasPgUrl = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL);
 const dbType = process.env.DB_TYPE || (hasPgUrl ? 'postgres' : 'sqlite');
 
@@ -30,15 +29,9 @@ let dbImpl;
 if (dbType === 'postgres') {
   console.log('[DB] Using PostgreSQL adapter');
   dbImpl = require('./postgres');
-} else if (dbType === 'sqlite') {
-  console.log('[DB] Using SQLite adapter');
-  dbImpl = require('./sqlite');
-} else if (dbType === 'mysql') {
-  dbImpl = require('./mysql');
-} else if (dbType === 'sqlserver') {
-  dbImpl = require('./sqlserver');
 } else {
-  console.log('[DB] Fallback to SQLite adapter');
+  // SQLite 用于本地开发，Vercel 上不需要
+  console.log('[DB] Using SQLite adapter');
   dbImpl = require('./sqlite');
 }
 

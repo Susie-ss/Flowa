@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "cd Server/server && npm install",
+  "outputDirectory": "Server/server/public",
+  "installCommand": "cd Server/server && npm install",
+  "builds": [
+    {
+      "src": "Server/server/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "Server/server/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "Server/server/public/$1"
+    }
+  ]
+}

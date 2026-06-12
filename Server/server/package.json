@@ -2,10 +2,10 @@
   "name": "axure-preview-platform",
   "version": "1.0.0",
   "description": "Axure preview file management platform",
-  "main": "server/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "npx nodemon server/index.js"
+    "start": "node index.js",
+    "dev": "npx nodemon index.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.12",

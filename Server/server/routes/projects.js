@@ -5,13 +5,18 @@ const { authMiddleware } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../db/logger');
 
-// 安全地获取 projects 表列名（兼容未迁移的旧数据库）
+// 安全地获取 projects 表列名（兼容 SQLite 和 PostgreSQL）
 var _safeProjCols = null;
 async function getSafeProjectCols() {
   if (_safeProjCols) return _safeProjCols;
   var base = 'p.id, p.name, p.owner_id, p.share_token, p.share_permission, p.pages_json, p.version_num, p.color, p.created_at, p.updated_at';
   try {
-    var cols = await db.all('PRAGMA table_info(projects)');
+    var cols;
+    if (process.env.DATABASE_URL) {
+      cols = await db.all("SELECT column_name as name FROM information_schema.columns WHERE table_name = 'projects'");
+    } else {
+      cols = await db.all('PRAGMA table_info(projects)');
+    }
     var names = cols.map(function(c) { return c.name; });
     if (names.indexOf('share_password') >= 0) base += ', p.share_password';
     if (names.indexOf('share_expiry_days') >= 0) base += ', p.share_expiry_days';
@@ -317,7 +322,11 @@ router.put('/:id', async (req, res) => {
     if (Array.isArray(productLineIds)) {
       for (const lineId of productLineIds) {
         const relId = db.generateId();
-        await db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, lineId, req.user.userId]);
+        if (process.env.DATABASE_URL) {
+          await db.run('INSERT INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?) ON CONFLICT (project_id, product_line_id) DO NOTHING', [relId, req.params.id, lineId, req.user.userId]);
+        } else {
+          await db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, lineId, req.user.userId]);
+        }
       }
     }
     
@@ -342,8 +351,13 @@ router.put('/:id/share-permission', async (req, res) => {
       return res.status(403).json({ error: '只有项目创建者可以设置权限' });
     }
     
-    // 检测新列是否存在
-    var cols = await db.all('PRAGMA table_info(projects)');
+    // 检测新列是否存在（兼容 SQLite 和 PostgreSQL）
+    var cols;
+    if (process.env.DATABASE_URL) {
+      cols = await db.all("SELECT column_name as name FROM information_schema.columns WHERE table_name = 'projects'");
+    } else {
+      cols = await db.all('PRAGMA table_info(projects)');
+    }
     var colNames = cols.map(function(c) { return c.name; });
     var hasPasswordCol = colNames.indexOf('share_password') >= 0;
     var hasExpiryCol = colNames.indexOf('share_expiry_days') >= 0;
@@ -546,7 +560,11 @@ router.put('/:id/tags', async (req, res) => {
     if (Array.isArray(tagIds) && tagIds.length > 0) {
       for (const tagId of tagIds) {
         const relId = db.generateId();
-        await db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, tagId, req.user.userId]);
+        if (process.env.DATABASE_URL) {
+          await db.run('INSERT INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?) ON CONFLICT (project_id, product_line_id) DO NOTHING', [relId, req.params.id, tagId, req.user.userId]);
+        } else {
+          await db.run('INSERT OR IGNORE INTO project_product_lines (id, project_id, product_line_id, user_id) VALUES (?, ?, ?, ?)', [relId, req.params.id, tagId, req.user.userId]);
+        }
       }
     }
     

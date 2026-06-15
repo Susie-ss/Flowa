@@ -3,10 +3,16 @@ const router = express.Router();
 const db = require('../db/connector');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 
-// 检测新列是否存在（兼容未迁移的旧数据库）
+// 检测新列是否存在（兼容 SQLite 和 PostgreSQL）
 async function getShareCols() {
   try {
-    var cols = await db.all('PRAGMA table_info(projects)');
+    var cols;
+    if (process.env.DATABASE_URL) {
+      // PostgreSQL
+      cols = await db.all("SELECT column_name as name FROM information_schema.columns WHERE table_name = 'projects'");
+    } else {
+      cols = await db.all('PRAGMA table_info(projects)');
+    }
     var names = cols.map(function(c) { return c.name; });
     return {
       hasPassword: names.indexOf('share_password') >= 0,

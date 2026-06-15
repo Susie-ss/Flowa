@@ -63,13 +63,10 @@ router.get('/stats', async (req, res) => {
     `);
     
     // 按日期统计（最近7天）
-    const dateStats = await db.all(`
-      SELECT DATE(timestamp) as date, COUNT(*) as count 
-      FROM logs 
-      WHERE timestamp >= datetime('now', '-7 days')
-      GROUP BY DATE(timestamp) 
-      ORDER BY date DESC
-    `);
+    const dateSql = process.env.DATABASE_URL
+      ? `SELECT DATE(timestamp) as date, COUNT(*) as count FROM logs WHERE timestamp >= NOW() - INTERVAL '7 days' GROUP BY DATE(timestamp) ORDER BY date DESC`
+      : `SELECT DATE(timestamp) as date, COUNT(*) as count FROM logs WHERE timestamp >= datetime('now', '-7 days') GROUP BY DATE(timestamp) ORDER BY date DESC`;
+    const dateStats = await db.all(dateSql);
     
     // 总日志数
     const total = await db.get('SELECT COUNT(*) as count FROM logs');

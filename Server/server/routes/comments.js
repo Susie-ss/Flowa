@@ -115,10 +115,17 @@ router.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), 
     }
 
     const now = Math.floor(Date.now() / 1000);
-    await db.run(
-      'INSERT OR REPLACE INTO user_avatars (user_id, avatar_data, updated_at) VALUES (?, ?, ?)',
-      [req.user.userId, base64, now]
-    );
+    if (process.env.DATABASE_URL) {
+      await db.run(
+        'INSERT INTO user_avatars (user_id, avatar_data, updated_at) VALUES (?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET avatar_data = EXCLUDED.avatar_data, updated_at = EXCLUDED.updated_at',
+        [req.user.userId, base64, now]
+      );
+    } else {
+      await db.run(
+        'INSERT OR REPLACE INTO user_avatars (user_id, avatar_data, updated_at) VALUES (?, ?, ?)',
+        [req.user.userId, base64, now]
+      );
+    }
 
     res.json({ success: true, avatar: base64 });
   } catch (e) {

@@ -64,8 +64,7 @@ app.use('/api/projects', require('./routes/members'));
 app.use('/api/logs', require('./routes/logs'));
 
 // 评论、头像、统计
-const commentsModule = require('./routes/comments');
-app.use('/', commentsModule.router);
+app.use('/', require('./routes/comments'));
 
 // 健康检查
 app.get('/api/health', (req, res) => {

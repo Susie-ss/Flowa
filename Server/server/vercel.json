@@ -1,12 +1,3 @@
 {
-  "version": 2,
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/(css|js|libs)/(.*)", "destination": "/public/$1/$2" },
-    { "source": "/favicon.png", "destination": "/public/favicon.png" },
-    { "source": "/preview.html", "destination": "/public/preview.html" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/api/index.js" }
-  ]
+  "version": 2
 }

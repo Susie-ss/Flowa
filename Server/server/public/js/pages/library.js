@@ -442,3 +442,430 @@ function formatFileSize(bytes) {
 // ===== 导出全局函数 =====
 window.renderLibraryPage = renderLibraryPage;
 window.showNewLibraryModal = showNewLibraryModal;
+
+// ===== 设计系统详情页 - 4个Tab =====
+
+var currentDSTab = 'icons'; // icons | fonts | components | sizes
+var dsIconSearch = '';
+var dsIconFilter = 'all'; // all | line | solid
+
+// Mock 图标数据 (32个)
+var mockIcons = [
+  { name: 'home', label: '首页', type: 'line' },
+  { name: 'search', label: '搜索', type: 'line' },
+  { name: 'settings', label: '设置', type: 'solid' },
+  { name: 'user', label: '用户', type: 'line' },
+  { name: 'heart', label: '收藏', type: 'solid' },
+  { name: 'bell', label: '通知', type: 'line' },
+  { name: 'mail', label: '邮件', type: 'line' },
+  { name: 'calendar', label: '日历', type: 'line' },
+  { name: 'upload', label: '上传', type: 'line' },
+  { name: 'download', label: '下载', type: 'line' },
+  { name: 'edit', label: '编辑', type: 'solid' },
+  { name: 'delete', label: '删除', type: 'line' },
+  { name: 'share', label: '分享', type: 'line' },
+  { name: 'lock', label: '锁定', type: 'solid' },
+  { name: 'unlock', label: '解锁', type: 'line' },
+  { name: 'eye', label: '查看', type: 'line' },
+  { name: 'eye-off', label: '隐藏', type: 'line' },
+  { name: 'plus', label: '添加', type: 'solid' },
+  { name: 'minus', label: '减少', type: 'solid' },
+  { name: 'check', label: '确认', type: 'solid' },
+  { name: 'close', label: '关闭', type: 'solid' },
+  { name: 'arrow-up', label: '上箭头', type: 'line' },
+  { name: 'arrow-down', label: '下箭头', type: 'line' },
+  { name: 'arrow-left', label: '左箭头', type: 'line' },
+  { name: 'arrow-right', label: '右箭头', type: 'line' },
+  { name: 'refresh', label: '刷新', type: 'line' },
+  { name: 'copy', label: '复制', type: 'line' },
+  { name: 'paste', label: '粘贴', type: 'line' },
+  { name: 'link', label: '链接', type: 'line' },
+  { name: 'image', label: '图片', type: 'line' },
+  { name: 'video', label: '视频', type: 'solid' },
+  { name: 'folder', label: '文件夹', type: 'line' }
+];
+
+// SVG 图标映射
+var iconSVGMap = {
+  home: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>',
+  search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  settings: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
+  user: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  heart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+  bell: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  mail: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  calendar: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  upload: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+  download: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  edit: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  delete: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+  share: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
+  lock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',
+  unlock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>',
+  eye: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  'eye-off': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  plus: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  minus: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>',
+  close: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  'arrow-up': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>',
+  'arrow-down': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19,12 12,19 5,12"/></svg>',
+  'arrow-left': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>',
+  'arrow-right': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>',
+  refresh: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>',
+  copy: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
+  paste: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
+  link: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
+  image: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>',
+  video: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
+  folder: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>'
+};
+
+// Mock 字体数据
+var mockFonts = [
+  { name: 'PingFang SC', family: 'sans-serif', weights: ['Regular (400)', 'Medium (500)', 'Semibold (600)'], sample: '原型协作平台', category: '系统字体' },
+  { name: 'Inter', family: 'sans-serif', weights: ['Regular (400)', 'Medium (500)', 'Bold (700)'], sample: 'ProtoPlatform Design', category: '西文字体' },
+  { name: 'Noto Sans SC', family: 'sans-serif', weights: ['Regular (400)', 'Medium (500)'], sample: '高质量设计系统', category: '中文字体' },
+  { name: 'Roboto Mono', family: 'monospace', weights: ['Regular (400)', 'Medium (500)'], sample: 'const value = 42;', category: '等宽字体' }
+];
+
+// Mock 组件样式数据
+var mockComponents = [
+  { name: '主按钮', category: '按钮', type: 'primary', props: 'Primary Button', css: '.btn-primary { background: #5B5EF4; color: #fff; }' },
+  { name: '次要按钮', category: '按钮', type: 'ghost', props: 'Secondary Button', css: '.btn-ghost { border: 1px solid #E8EAEF; }' },
+  { name: '危险按钮', category: '按钮', type: 'danger', props: 'Danger Button', css: '.btn-danger { background: #FF6B6B; }' },
+  { name: '小按钮', category: '按钮', type: 'sm', props: 'Small Button', css: '.btn-sm { padding: 4px 10px; font-size: 12px; }' },
+  { name: '输入框', category: '表单', type: 'input', props: 'Placeholder text', css: '.input { border: 1px solid #E8EAEF; }' },
+  { name: '下拉选择', category: '表单', type: 'select', props: '请选择', css: 'select { appearance: none; }' },
+  { name: '多行文本', category: '表单', type: 'textarea', props: '请输入描述...', css: 'textarea { resize: vertical; }' },
+  { name: '复选框', category: '表单', type: 'checkbox', props: '☑ 选项文本', css: 'input[type=checkbox] {}' },
+  { name: '卡片', category: '容器', type: 'card', props: 'Card Container', css: '.card { border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }' },
+  { name: '弹窗', category: '容器', type: 'modal', props: 'Modal Dialog', css: '.modal { max-width: 480px; }' },
+  { name: '标签', category: '展示', type: 'badge', props: 'New', css: '.badge { font-size: 10px; padding: 2px 6px; }' },
+  { name: '头像', category: '展示', type: 'avatar', props: 'U', css: '.avatar { border-radius: 50%; }' },
+  { name: '导航项', category: '导航', type: 'nav-item', props: '菜单项', css: '.nav-item { padding: 10px 12px; }' },
+  { name: '面包屑', category: '导航', type: 'breadcrumb', props: '首页 > 项目 > 详情', css: '.breadcrumb { gap: 8px; }' },
+  { name: '提示框', category: '反馈', type: 'tooltip', props: '提示信息', css: '.tooltip { position: absolute; }' },
+  { name: '加载中', category: '反馈', type: 'spinner', props: '⏳ Loading...', css: '@keyframes spin { to { rotate: 360deg; } }' }
+];
+
+// Mock 字号规范数据
+var mockFontSizes = [
+  { name: '标题 1', tag: 'h1', size: '32px', lineHeight: '40px', weight: '600', usage: '页面主标题' },
+  { name: '标题 2', tag: 'h2', size: '24px', lineHeight: '32px', weight: '600', usage: '区块标题' },
+  { name: '标题 3', tag: 'h3', size: '18px', lineHeight: '26px', weight: '600', usage: '卡片标题' },
+  { name: '标题 4', tag: 'h4', size: '16px', lineHeight: '24px', weight: '600', usage: '段落标题' },
+  { name: '正文大', tag: 'p-lg', size: '15px', lineHeight: '22px', weight: '400', usage: '大段正文' },
+  { name: '正文', tag: 'p', size: '14px', lineHeight: '20px', weight: '400', usage: '常规正文' },
+  { name: '正文小', tag: 'p-sm', size: '13px', lineHeight: '18px', weight: '400', usage: '辅助文本' },
+  { name: '说明文字', tag: 'caption', size: '12px', lineHeight: '16px', weight: '400', usage: '说明/标注' },
+  { name: '微小文字', tag: 'tiny', size: '10px', lineHeight: '14px', weight: '400', usage: '角标/水印' }
+];
+
+// 查找设计系统
+function findDesignSystemById(id) {
+  for (var i = 0; i < designSystems.length; i++) {
+    if (designSystems[i].id === id) return designSystems[i];
+  }
+  return null;
+}
+
+// Tab 图标 SVG
+function getTabIconSVG(key) {
+  var icons = {
+    icons: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    fonts: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,7 4,4 20,4 20,7"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="20"/></svg>',
+    components: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="20" height="8" rx="1"/></svg>',
+    sizes: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="20" y2="4"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="20" x2="18" y2="20"/></svg>'
+  };
+  return icons[key] || '';
+}
+
+// 渲染设计系统详情页
+function renderDesignSystemDetail(dsId) {
+  var mainContent = document.getElementById('main-content');
+  if (!mainContent) return;
+
+  var ds = findDesignSystemById(dsId);
+  currentDSTab = 'icons';
+  dsIconSearch = '';
+  dsIconFilter = 'all';
+
+  // 隐藏 header 右侧新建按钮
+  var headerRight = document.querySelector('.header-right');
+  if (headerRight) {
+    var btns = headerRight.querySelectorAll(':scope > *');
+    btns.forEach(function(btn) { btn.style.display = 'none'; });
+  }
+
+  mainContent.innerHTML = renderDetailHTML(ds);
+  bindDetailEvents();
+}
+
+function renderDetailHTML(ds) {
+  var dsName = ds ? ds.name : '未知';
+  var dsDesc = ds ? '组件库 ID: ' + ds.id + ' — 完整的设计系统定义，包含图标、字体、组件和字号规范' : '';
+
+  // 过滤图标
+  var filteredIcons = mockIcons.filter(function(icon) {
+    var matchSearch = !dsIconSearch ||
+      icon.name.toLowerCase().indexOf(dsIconSearch.toLowerCase()) !== -1 ||
+      icon.label.indexOf(dsIconSearch) !== -1;
+    var matchFilter = dsIconFilter === 'all' || icon.type === dsIconFilter;
+    return matchSearch && matchFilter;
+  });
+
+  // 构建 tab 按钮
+  var tabs = [
+    { key: 'icons', label: '图标' },
+    { key: 'fonts', label: '字体' },
+    { key: 'components', label: '组件' },
+    { key: 'sizes', label: '字号' }
+  ];
+
+  var tabsHTML = tabs.map(function(tab) {
+    return '<button class="ds-tab' + (currentDSTab === tab.key ? ' active' : '') + '" data-dstab="' + tab.key + '">' +
+      getTabIconSVG(tab.key) + '<span>' + tab.label + '</span></button>';
+  }).join('');
+
+  // 根据当前 tab 构建内容
+  var contentHTML = '';
+  if (currentDSTab === 'icons') {
+    contentHTML = renderIconsTab(filteredIcons);
+  } else if (currentDSTab === 'fonts') {
+    contentHTML = renderFontsTab();
+  } else if (currentDSTab === 'components') {
+    contentHTML = renderComponentsTab();
+  } else if (currentDSTab === 'sizes') {
+    contentHTML = renderSizesTab();
+  }
+
+  return '<div class="ds-detail">' +
+    // Header
+    '<div class="ds-header">' +
+      '<div class="ds-header-left">' +
+        '<button class="btn btn-ghost ds-back-btn">← 返回</button> ' +
+        '<div>' +
+          '<h2>' + escapeHTML(dsName) + '</h2>' +
+          '<p class="text-muted">' + dsDesc + '</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Tabs
+    '<div class="ds-tabs">' + tabsHTML + '</div>' +
+
+    // Content
+    '<div class="ds-content" id="ds-content-area">' + contentHTML + '</div>' +
+  '</div>';
+}
+
+function renderIconsTab(icons) {
+  var cardsHTML = icons.map(function(icon) {
+    var svg = iconSVGMap[icon.name] || '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+    return '<div class="icon-card">' +
+      '<div class="icon-preview">' + svg + '</div>' +
+      '<div class="icon-info">' +
+        '<span class="icon-name">' + icon.name + '</span>' +
+        '<span class="icon-label">' + icon.label + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header">' +
+      '<h3>图标库</h3>' +
+      '<span class="ds-count">' + icons.length + ' 个图标</span>' +
+      '<div class="ds-search">' +
+        '<input type="text" class="input ds-search-input" id="ds-icon-search" placeholder="搜索图标..." value="' + escapeHTML(dsIconSearch) + '" />' +
+      '</div>' +
+    '</div>' +
+    '<div class="ds-tags">' +
+      '<button class="ds-tag' + (dsIconFilter === 'all' ? ' active' : '') + '" data-filter="all">全部</button>' +
+      '<button class="ds-tag' + (dsIconFilter === 'line' ? ' active' : '') + '" data-filter="line">线性</button>' +
+      '<button class="ds-tag' + (dsIconFilter === 'solid' ? ' active' : '') + '" data-filter="solid">面性</button>' +
+    '</div>' +
+    '<div class="icons-grid">' + (cardsHTML || '<div class="empty-state" style="grid-column:1/-1"><p>未找到匹配的图标</p></div>') + '</div>' +
+  '</section>';
+}
+
+function renderFontsTab() {
+  var listHTML = mockFonts.map(function(font) {
+    var weightTags = font.weights.map(function(w) {
+      return '<span class="font-weight-tag">' + w + '</span>';
+    }).join('');
+    return '<div class="font-card">' +
+      '<div class="font-header">' +
+        '<h4>' + font.name + '</h4>' +
+        '<span class="font-category">' + font.category + '</span>' +
+      '</div>' +
+      '<div class="font-sample" style="font-family:' + font.family + '">' + font.sample + '</div>' +
+      '<div class="font-meta"><span class="meta-label">字重：</span>' + weightTags + '</div>' +
+      '<div class="font-meta"><span class="meta-label">CSS：</span><code class="font-code">font-family: \'' + font.name + '\', ' + font.family + '</code></div>' +
+    '</div>';
+  }).join('');
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header"><h3>字体规范</h3><span class="ds-count">' + mockFonts.length + ' 款字体</span></div>' +
+    '<div class="fonts-list">' + listHTML + '</div>' +
+  '</section>';
+}
+
+function renderComponentsTab() {
+  function getPreviewStyle(type) {
+    var styles = {
+      primary:   'background:#5B5EF4;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;display:inline-block;',
+      ghost:     'border:1px solid #E8EAEF;color:#666;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;display:inline-block;',
+      danger:    'background:#FF6B6B;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;display:inline-block;',
+      sm:        'background:#5B5EF4;color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500;display:inline-block;',
+      input:     'border:1px solid #E8EAEF;color:#999;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;',
+      select:    'border:1px solid #E8EAEF;color:#999;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;background:#fff;',
+      textarea:  'border:1px solid #E8EAEF;color:#999;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;min-height:48px;box-sizing:border-box;',
+      checkbox:  '',
+      card:      'background:#fff;border:1px solid #E8EAEF;border-radius:8px;padding:12px;font-size:13px;color:#333;box-shadow:0 1px 4px rgba(0,0,0,.08);width:100%;box-sizing:border-box;',
+      modal:     'background:#fff;border:1px solid #E8EAEF;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;color:#333;box-shadow:0 4px 16px rgba(0,0,0,.12);width:100%;box-sizing:border-box;text-align:center;',
+      badge:     'background:#5B5EF4;color:#fff;font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600;display:inline-block;',
+      avatar:    'width:32px;height:32px;background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;',
+      'nav-item':'padding:8px 12px;background:#f5f7fa;border-radius:6px;font-size:13px;color:#333;width:100%;box-sizing:border-box;display:block;',
+      breadcrumb:'font-size:12px;color:#999;gap:4px;display:flex;',
+      tooltip:  'background:#333;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;display:inline-block;',
+      spinner:  'width:20px;height:20px;border:2px solid #E8EAEF;border-top-color:#5B5EF4;border-radius:50%;display:inline-block;'
+    };
+    return styles[type] || '';
+  }
+
+  var gridHTML = mockComponents.map(function(comp) {
+    var previewStyle = getPreviewStyle(comp.type);
+    var previewTag = comp.type === 'checkbox'
+      ? '<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" checked style="accent-color:#5B5EF4"/> 选项文本</label>'
+      : comp.type === 'avatar'
+        ? '<div style="' + previewStyle + '">U</div>'
+        : comp.type === 'spinner'
+          ? '<div style="' + previewStyle + '"></div>'
+          : '<span style="' + previewStyle + '">' + comp.props + '</span>';
+
+    return '<div class="component-card">' +
+      '<div class="comp-header"><h4>' + comp.name + '</h4><span class="comp-category">' + comp.category + '</span></div>' +
+      '<div class="comp-preview">' + previewTag + '</div>' +
+      '<div class="comp-css"><code>' + escapeHTML(comp.css) + '</code></div>' +
+    '</div>';
+  }).join('');
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header"><h3>组件</h3><span class="ds-count">' + mockComponents.length + ' 个组件</span></div>' +
+    '<div class="components-grid">' + gridHTML + '</div>' +
+  '</section>';
+}
+
+function renderSizesTab() {
+  var rowsHTML = mockFontSizes.map(function(fs) {
+    return '<tr>' +
+      '<td><div class="size-preview" style="font-size:' + fs.size + ';line-height:' + fs.lineHeight + ';font-weight:' + fs.weight + '">' + fs.name + '</div></td>' +
+      '<td><code>' + fs.tag + '</code></td>' +
+      '<td>' + fs.size + '</td>' +
+      '<td>' + fs.lineHeight + '</td>' +
+      '<td>' + fs.weight + '</td>' +
+      '<td><span class="size-usage">' + fs.usage + '</span></td>' +
+    '</tr>';
+  }).join('');
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header"><h3>字号规范</h3><span class="ds-count">' + mockFontSizes.length + ' 个字号</span></div>' +
+    '<div class="sizes-table-wrapper"><table class="sizes-table">' +
+      '<thead><tr><th style="width:30%">预览</th><th>标签</th><th>字号</th><th>行高</th><th>字重</th><th>用途</th></tr></thead>' +
+      '<tbody>' + rowsHTML + '</tbody>' +
+    '</table></div></section>';
+}
+
+// 绑定详情页事件
+function bindDetailEvents() {
+  // 返回按钮
+  var backBtn = document.querySelector('.ds-back-btn');
+  if (backBtn) backBtn.onclick = function(e) { e.preventDefault(); navigateTo('library'); };
+
+  // Tab 切换
+  document.querySelectorAll('.ds-tab').forEach(function(tab) {
+    tab.onclick = function() {
+      currentDSTab = this.getAttribute('data-dstab');
+      var dsId = window.location.pathname.split('/')[2];
+      var ds = findDesignSystemById(dsId);
+      var contentEl = document.getElementById('ds-content-area');
+      if (contentEl) {
+        if (currentDSTab === 'icons') {
+          var filtered = mockIcons.filter(function(ic) {
+            var ms = !dsIconSearch || ic.name.toLowerCase().indexOf(dsIconSearch.toLowerCase()) !== -1 || ic.label.indexOf(dsIconSearch) !== -1;
+            var mf = dsIconFilter === 'all' || ic.type === dsIconFilter;
+            return ms && mf;
+          });
+          contentEl.innerHTML = renderIconsTab(filtered);
+        } else if (currentDSTab === 'fonts') {
+          contentEl.innerHTML = renderFontsTab();
+        } else if (currentDSTab === 'components') {
+          contentEl.innerHTML = renderComponentsTab();
+        } else if (currentDSTab === 'sizes') {
+          contentEl.innerHTML = renderSizesTab();
+        }
+        // 更新 tab 状态
+        document.querySelectorAll('.ds-tab').forEach(function(t) {
+          t.classList.toggle('active', t.getAttribute('data-dstab') === currentDSTab);
+        });
+        bindDetailEvents();
+      }
+    };
+  });
+
+  // 图标搜索
+  var searchInput = document.getElementById('ds-icon-search');
+  if (searchInput) {
+    searchInput.oninput = function() {
+      dsIconSearch = this.value;
+      refreshIconsTab();
+    };
+  }
+
+  // 分类筛选
+  document.querySelectorAll('.ds-tag[data-filter]').forEach(function(tag) {
+    tag.onclick = function() {
+      dsIconFilter = this.getAttribute('data-filter');
+      document.querySelectorAll('.ds-tag[data-filter]').forEach(function(t) {
+        t.classList.toggle('active', t.getAttribute('data-filter') === dsIconFilter);
+      });
+      refreshIconsTab();
+    };
+  });
+}
+
+function refreshIconsTab() {
+  var filtered = mockIcons.filter(function(ic) {
+    var ms = !dsIconSearch || ic.name.toLowerCase().indexOf(dsIconSearch.toLowerCase()) !== -1 || ic.label.indexOf(dsIconSearch) !== -1;
+    var mf = dsIconFilter === 'all' || ic.type === dsIconFilter;
+    return ms && mf;
+  });
+  var contentEl = document.getElementById('ds-content-area');
+  if (contentEl) {
+    contentEl.innerHTML = renderIconsTab(filtered);
+    bindDetailEvents();
+  }
+}
+
+// 让 DS 卡片可点击跳转
+window.renderLibraryPage = (function(origRender) {
+  return function() {
+    origRender.call(this);
+
+    // 绑定卡片点击事件
+    setTimeout(function() {
+      document.querySelectorAll('.ds-card[data-id]').forEach(function(card) {
+        card.style.cursor = 'pointer';
+        card.onclick = function() {
+          var id = this.getAttribute('data-id');
+          navigateTo('library-detail', { id: id });
+        };
+      });
+    }, 0);
+  };
+})(renderLibraryPage);
+
+// 导出详情渲染函数
+window.renderDesignSystemDetail = renderDesignSystemDetail;
+window.findDesignSystemById = findDesignSystemById;

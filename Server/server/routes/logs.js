@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const db = require('../db/sqlite');
+const db = require('../db/connector');
 const logger = require('../db/logger');
 
 // 查询日志（需认证，仅管理员）

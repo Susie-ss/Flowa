@@ -18,7 +18,8 @@ function parseRoute() {
   if (path === '/register')   return { route: 'register', params: {} };
   if (path === '/products')   return { route: 'products', params: {} };
   if (path === '/projects')   return { route: 'projects', params: {} };
-  
+  if (path === '/library')    return { route: 'library', params: {} };
+
   if (parts[0] === 'share' && parts[1]) return { route: 'share', params: { token: parts[1] } };
   
   return { route: 'home', params: {} };
@@ -33,6 +34,7 @@ function navigateTo(route, params) {
     case 'home':         url = '/'; break;
     case 'products':     url = '/products'; break;
     case 'projects':     url = '/projects'; break;
+    case 'library':      url = '/library'; break;
     case 'project-detail':
       window.open('/preview.html?project=' + params.id, '_blank');
       return;
@@ -108,13 +110,21 @@ async function renderRoute() {
   document.body.style.margin = '';
   
   updateSidebarActive(route);
-  
+  updatePageTitle(route);
+
+  // 恢复 header 默认状态（非组件库页面时）
+  if (route !== 'library' && typeof restoreHeaderDefault === 'function') {
+    restoreHeaderDefault();
+  }
+
   if (route === 'home') {
     if (typeof renderHomePage === 'function') renderHomePage();
   } else if (route === 'products') {
     if (typeof renderProductsPage === 'function') renderProductsPage();
   } else if (route === 'projects') {
     if (typeof renderProjectsPage === 'function') renderProjectsPage();
+  } else if (route === 'library') {
+    if (typeof renderLibraryPage === 'function') renderLibraryPage();
   }
 }
 
@@ -124,6 +134,19 @@ function updateSidebarActive(route) {
     if (r === route) item.classList.add('active');
     else item.classList.remove('active');
   });
+}
+
+// 页面标题映射
+const pageTitleMap = {
+  home: '首页',
+  products: '产品线',
+  projects: '项目',
+  library: '组件库'
+};
+
+function updatePageTitle(route) {
+  var titleEl = document.querySelector('.page-title');
+  if (titleEl) titleEl.textContent = pageTitleMap[route] || '首页';
 }
 
 // Render login/register pages

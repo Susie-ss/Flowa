@@ -45,10 +45,8 @@ if (!isVercel) {
   });
 }
 
-// 静态文件：前端页面（仅本地开发时启用，Vercel 上由 vercel.json 处理）
-if (!isVercel) {
-  app.use(express.static(path.join(__dirname, 'public')));
-}
+// 静态文件：前端页面
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 数据库（自动检测 Postgres/SQLite）
 const db = require('./db/connector');
@@ -71,12 +69,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: process.env.DATABASE_URL ? 'postgres' : 'sqlite', vercel: isVercel });
 });
 
-// 前端 SPA 路由回退（仅本地开发，Vercel 上由 vercel.json 处理）
-if (!isVercel) {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
-}
+// 前端 SPA 路由回退
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // 错误处理
 app.use((err, req, res, next) => {

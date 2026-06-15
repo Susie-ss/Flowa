@@ -19,6 +19,7 @@ function parseRoute() {
   if (path === '/products')   return { route: 'products', params: {} };
   if (path === '/projects')   return { route: 'projects', params: {} };
   if (path === '/library')    return { route: 'library', params: {} };
+  if (parts[0] === 'library' && parts[1]) return { route: 'library-detail', params: { id: parts[1] } };
 
   if (parts[0] === 'share' && parts[1]) return { route: 'share', params: { token: parts[1] } };
   
@@ -35,6 +36,7 @@ function navigateTo(route, params) {
     case 'products':     url = '/products'; break;
     case 'projects':     url = '/projects'; break;
     case 'library':      url = '/library'; break;
+    case 'library-detail': url = '/library/' + params.id; break;
     case 'project-detail':
       window.open('/preview.html?project=' + params.id, '_blank');
       return;
@@ -110,10 +112,10 @@ async function renderRoute() {
   document.body.style.margin = '';
   
   updateSidebarActive(route);
-  updatePageTitle(route);
+  updatePageTitle(route, params);
 
   // 恢复 header 默认状态（非组件库页面时）
-  if (route !== 'library' && typeof restoreHeaderDefault === 'function') {
+  if (route !== 'library' && route !== 'library-detail' && typeof restoreHeaderDefault === 'function') {
     restoreHeaderDefault();
   }
 
@@ -125,6 +127,8 @@ async function renderRoute() {
     if (typeof renderProjectsPage === 'function') renderProjectsPage();
   } else if (route === 'library') {
     if (typeof renderLibraryPage === 'function') renderLibraryPage();
+  } else if (route === 'library-detail') {
+    if (typeof renderDesignSystemDetail === 'function') renderDesignSystemDetail(params.id);
   }
 }
 
@@ -144,9 +148,15 @@ const pageTitleMap = {
   library: '组件库'
 };
 
-function updatePageTitle(route) {
+function updatePageTitle(route, params) {
   var titleEl = document.querySelector('.page-title');
-  if (titleEl) titleEl.textContent = pageTitleMap[route] || '首页';
+  if (!titleEl) return;
+  if (route === 'library-detail' && params && params.id) {
+    var ds = findDesignSystemById(params.id);
+    titleEl.textContent = ds ? '设计规范 - ' + ds.name : '设计规范';
+  } else {
+    titleEl.textContent = pageTitleMap[route] || '首页';
+  }
 }
 
 // Render login/register pages

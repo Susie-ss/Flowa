@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "public": true,
-  "cleanUrls": true,
-  "trailingSlash": false,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/preview.html", "destination": "/preview.html" },
-    { "source": "/(.*)", "destination": "/public/$1" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
+    { "source": "/(css|js|libs)/(.*)", "destination": "/public/$1/$2" },
+    { "source": "/favicon.png", "destination": "/public/favicon.png" },
+    { "source": "/preview.html", "destination": "/public/preview.html" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

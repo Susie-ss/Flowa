@@ -42,7 +42,8 @@ router.post('/register', rateLimit('register', req => req.ip || req.connection.r
     logger.info(`User registered: ${username}`, { user_id: userId, username });
     res.json({ success: true, userId });
   } catch (e) {
-    return res.status(500).json({ error: '注册失败' });
+    console.error('[register] error:', e.message, e.stack);
+    return res.status(500).json({ error: '注册失败', detail: e.message });
   }
 });
 
@@ -114,7 +115,8 @@ router.post('/login', async (req, res) => {
 
     logger.info(`User logged in: ${username}`, { user_id: user.id, username, ip: req.ip });
   } catch (e) {
-    return res.status(500).json({ error: '登录失败' });
+    console.error('[login] error:', e.message, e.stack);
+    return res.status(500).json({ error: '登录失败', detail: e.message });
   }
 });
 

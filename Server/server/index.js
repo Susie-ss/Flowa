@@ -45,9 +45,22 @@ if (!isVercel) {
   });
 }
 
-// 静态文件：前端页面（Vercel 上由 public/ 目录自动服务，express.static 会被忽略）
+// 静态文件：前端页面（本地开发用 express.static，Vercel 上手动 sendFile）
 if (!isVercel) {
   app.use(express.static(path.join(__dirname, 'public')));
+} else {
+  // Vercel 上 express.static() 会被忽略，手动处理静态文件
+  const publicDir = path.join(__dirname, 'public');
+  // CSS/JS/图片等静态资源
+  app.use('/css', (req, res, next) => { try { res.sendFile(path.join(publicDir, req.path)); } catch(e) { next(); } });
+  app.use('/js', (req, res, next) => { try { res.sendFile(path.join(publicDir, req.path)); } catch(e) { next(); } });
+  app.use('/libs', (req, res, next) => { try { res.sendFile(path.join(publicDir, req.path)); } catch(e) { next(); } });
+  app.get('/favicon.png', (req, res) => { res.sendFile(path.join(publicDir, 'favicon.png')); });
+  app.get('/preview.html', (req, res) => { res.sendFile(path.join(publicDir, 'preview.html')); });
+  // SPA 回退：所有非 API 请求返回 index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
 }
 
 // 数据库（自动检测 Postgres/SQLite）
@@ -70,13 +83,6 @@ app.use('/', require('./routes/comments'));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: process.env.DATABASE_URL ? 'postgres' : 'sqlite', vercel: isVercel });
 });
-
-// 前端 SPA 路由回退（Vercel 上 public/ 由 CDN 处理，其他路由由 Express 处理）
-if (!isVercel) {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
-}
 
 // 错误处理
 app.use((err, req, res, next) => {

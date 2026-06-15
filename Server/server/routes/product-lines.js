@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
             AND (p.owner_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?))
         )
       ORDER BY pl.sort_order ASC
-    `, [req.user.userId, req.user.userId, req.user.userId, req.user.userId, req.user.userId, req.user.userId]);
+    `, [req.user.userId, req.user.userId, req.user.userId, req.user.userId, req.user.userId, req.user.userId, req.user.userId]);
     
     res.json({ success: true, data: { lines } });
   } catch (e) {

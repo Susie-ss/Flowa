@@ -19,6 +19,7 @@ function parseRoute() {
   if (path === '/products')   return { route: 'products', params: {} };
   if (path === '/projects')   return { route: 'projects', params: {} };
   if (path === '/library')    return { route: 'library', params: {} };
+  if (path === '/ai-generate') return { route: 'ai-generate', params: {} };
   if (parts[0] === 'library' && parts[1]) return { route: 'library-detail', params: { id: parts[1] } };
 
   if (parts[0] === 'share' && parts[1]) return { route: 'share', params: { token: parts[1] } };
@@ -36,6 +37,7 @@ function navigateTo(route, params) {
     case 'products':     url = '/products'; break;
     case 'projects':     url = '/projects'; break;
     case 'library':      url = '/library'; break;
+    case 'ai-generate':  url = '/ai-generate'; break;
     case 'library-detail': url = '/library/' + params.id; break;
     case 'project-detail':
       window.open('/preview.html?project=' + params.id, '_blank');
@@ -129,6 +131,8 @@ async function renderRoute() {
     if (typeof renderLibraryPage === 'function') renderLibraryPage();
   } else if (route === 'library-detail') {
     if (typeof renderDesignSystemDetail === 'function') renderDesignSystemDetail(params.id);
+  } else if (route === 'ai-generate') {
+    if (typeof renderAIGeneratePage === 'function') renderAIGeneratePage();
   }
 }
 
@@ -145,7 +149,8 @@ const pageTitleMap = {
   home: '首页',
   products: '产品线',
   projects: '项目',
-  library: '组件库'
+  library: '组件库',
+  'ai-generate': 'AI生成'
 };
 
 function updatePageTitle(route, params) {

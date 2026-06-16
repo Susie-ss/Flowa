@@ -75,6 +75,9 @@ app.use('/api/logs', require('./routes/logs'));
 // 评论、头像、统计
 app.use('/', require('./routes/comments'));
 
+// AI 生成
+app.use('/api/ai', require('./routes/ai'));
+
 // 健康检查
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: process.env.DATABASE_URL ? 'postgres' : 'sqlite', vercel: isVercel });

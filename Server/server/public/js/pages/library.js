@@ -946,7 +946,13 @@ function renderComponentsTab() {
 }
 
 function renderSizesTab() {
-  var sizes = getDSSizes();  // ★ 从当前 DS 取字号数据
+  var sizes = getDSSizes();  // 从当前 DS 取字号数据
+  // 按字号从大到小排序
+  sizes = sizes.slice().sort(function(a, b) {
+    var sizeA = parseFloat(a.size) || 0;
+    var sizeB = parseFloat(b.size) || 0;
+    return sizeB - sizeA;
+  });
   var rowsHTML = sizes.map(function(fs) {
     return '<tr>' +
       '<td><div class="size-preview" style="font-size:' + fs.size + ';line-height:' + fs.lineHeight + ';font-weight:' + fs.weight + '">' + fs.name + '</div></td>' +
@@ -968,9 +974,19 @@ function renderSizesTab() {
 
 // 绑定详情页事件
 function bindDetailEvents() {
-  // 返回按钮
+  // 返回按钮 - 同时恢复 header 右侧被隐藏的按钮
   var backBtn = document.querySelector('.ds-back-btn');
-  if (backBtn) backBtn.onclick = function(e) { e.preventDefault(); currentDS = null; navigateTo('library'); };
+  if (backBtn) backBtn.onclick = function(e) { 
+    e.preventDefault(); 
+    currentDS = null;
+    // 恢复 header 右侧按钮显示
+    var hr = document.querySelector('.header-right');
+    if (hr) {
+      var hbtns = hr.querySelectorAll(':scope > *');
+      hbtns.forEach(function(btn) { btn.style.display = ''; });
+    }
+    navigateTo('library'); 
+  };
 
   // Tab 切换
   document.querySelectorAll('.ds-tab').forEach(function(tab) {

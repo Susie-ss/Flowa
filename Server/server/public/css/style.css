@@ -3121,3 +3121,249 @@ button {
   font-family: 'SF Mono','Fira Code',Consolas,monospace;
 }
 .size-usage { font-size: 12px; color: var(--text-muted); }
+
+/* ===== AI 生成页面 ===== */
+.ai-gen-page {
+  display: flex;
+  height: calc(100vh - 120px);
+  gap: 0;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.ai-gen-left {
+  width: 400px;
+  min-width: 360px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.ai-gen-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.ai-gen-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.ai-gen-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.ai-gen-ds-selector label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.ai-gen-ds-selector select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+
+.ai-gen-ds-selector select:focus {
+  border-color: var(--primary);
+}
+
+.ai-gen-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.ai-gen-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.ai-gen-msg-user {
+  flex-direction: row-reverse;
+}
+
+.ai-gen-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-gen-msg-bot .ai-gen-msg-avatar {
+  background: rgba(91,94,244,.1);
+}
+
+.ai-gen-msg-user .ai-gen-msg-avatar {
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-gen-msg-content {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 85%;
+}
+
+.ai-gen-msg-bot .ai-gen-msg-content {
+  background: var(--bg);
+  color: var(--text);
+  border-top-left-radius: 4px;
+}
+
+.ai-gen-msg-user .ai-gen-msg-content {
+  background: var(--primary);
+  color: #fff;
+  border-top-right-radius: 4px;
+}
+
+.ai-gen-msg-content p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.ai-gen-msg-content p + p {
+  margin-top: 4px;
+}
+
+.ai-gen-msg-extra {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-gen-preview-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ai-gen-page-badge {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(91,94,244,.08);
+  color: var(--primary);
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.ai-gen-page-badge:hover {
+  background: rgba(91,94,244,.15);
+}
+
+.ai-gen-input-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.ai-gen-input-area textarea {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  min-height: 38px;
+  max-height: 120px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.ai-gen-input-area textarea:focus {
+  border-color: var(--primary);
+}
+
+.ai-gen-input-area textarea:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.ai-gen-send-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.ai-gen-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ai-gen-preview-header span {
+  flex: 1;
+}
+
+.ai-gen-refresh-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: background .15s;
+}
+
+.ai-gen-refresh-btn:hover {
+  background: rgba(0,0,0,.05);
+  color: var(--text);
+}
+
+.ai-gen-preview-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 0;
+}
+

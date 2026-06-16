@@ -308,31 +308,104 @@ window.clearLibSelectedFile = function() {
 };
 
 // ===== 基于种子生成差异化数据 =====
-// 全量图标池
+// 全量图标池（扩充至 120+ 个，覆盖更多 UI 场景）
 var FULL_ICON_POOL = [
+  // 导航
   { name: 'home', label: '首页', type: 'line' }, { name: 'search', label: '搜索', type: 'line' },
-  { name: 'settings', label: '设置', type: 'solid' }, { name: 'user', label: '用户', type: 'line' },
-  { name: 'heart', label: '收藏', type: 'solid' }, { name: 'bell', label: '通知', type: 'line' },
-  { name: 'mail', label: '邮件', type: 'line' }, { name: 'calendar', label: '日历', type: 'line' },
-  { name: 'upload', label: '上传', type: 'line' }, { name: 'download', label: '下载', type: 'line' },
-  { name: 'edit', label: '编辑', type: 'solid' }, { name: 'delete', label: '删除', type: 'line' },
-  { name: 'share', label: '分享', type: 'line' }, { name: 'lock', label: '锁定', type: 'solid' },
-  { name: 'unlock', label: '解锁', type: 'line' }, { name: 'eye', label: '查看', type: 'line' },
-  { name: 'eye-off', label: '隐藏', type: 'line' }, { name: 'plus', label: '添加', type: 'solid' },
-  { name: 'minus', label: '减少', type: 'solid' }, { name: 'check', label: '确认', type: 'solid' },
-  { name: 'close', label: '关闭', type: 'solid' }, { name: 'arrow-up', label: '上箭头', type: 'line' },
-  { name: 'arrow-down', label: '下箭头', type: 'line' }, { name: 'arrow-left', label: '左箭头', type: 'line' },
-  { name: 'arrow-right', label: '右箭头', type: 'line' }, { name: 'refresh', label: '刷新', type: 'line' },
+  { name: 'menu', label: '菜单', type: 'line' }, { name: 'more-h', label: '更多(横)', type: 'solid' },
+  { name: 'more-v', label: '更多(竖)', type: 'solid' }, { name: 'back', label: '返回', type: 'line' },
+  { name: 'forward', label: '前进', type: 'line' }, { name: 'up-down', label: '上下展开', type: 'line' },
+  { name: 'chevron-up', label: '上三角', type: 'line' }, { name: 'chevron-down', label: '下三角', type: 'line' },
+  { name: 'chevron-left', label: '左三角', type: 'line' }, { name: 'chevron-right', label: '右三角', type: 'line' },
+  { name: 'arrow-up', label: '上箭头', type: 'line' }, { name: 'arrow-down', label: '下箭头', type: 'line' },
+  { name: 'arrow-left', label: '左箭头', type: 'line' }, { name: 'arrow-right', label: '右箭头', type: 'line' },
+  // 用户 & 账户
+  { name: 'user', label: '用户', type: 'line' }, { name: 'users', label: '用户组', type: 'line' },
+  { name: 'user-plus', label: '添加用户', type: 'line' }, { name: 'user-check', label: '用户已确认', type: 'line' },
+  { name: 'user-x', label: '移除用户', type: 'line' }, { name: 'user-circle', label: '用户头像', type: 'solid' },
+  { name: 'profile', label: '个人资料', type: 'line' }, { name: 'avatar', label: '头像', type: 'solid' },
+  // 操作
+  { name: 'settings', label: '设置', type: 'solid' }, { name: 'edit', label: '编辑', type: 'solid' },
+  { name: 'delete', label: '删除', type: 'line' }, { name: 'trash', label: '回收站', type: 'line' },
+  { name: 'plus', label: '添加', type: 'solid' }, { name: 'minus', label: '减少', type: 'solid' },
+  { name: 'check', label: '确认', type: 'solid' }, { name: 'close', label: '关闭', type: 'solid' },
+  { name: 'cancel', label: '取消', type: 'line' }, { name: 'save', label: '保存', type: 'solid' },
   { name: 'copy', label: '复制', type: 'line' }, { name: 'paste', label: '粘贴', type: 'line' },
-  { name: 'link', label: '链接', type: 'line' }, { name: 'image', label: '图片', type: 'line' },
-  { name: 'video', label: '视频', type: 'solid' }, { name: 'folder', label: '文件夹', type: 'line' },
-  { name: 'star', label: '星标', type: 'solid' }, { name: 'filter', label: '筛选', type: 'line' },
-  { name: 'sort', label: '排序', type: 'line' }, { name: 'grid', label: '网格', type: 'line' },
-  { name: 'list', label: '列表', type: 'line' }, { name: 'camera', label: '相机', type: 'line' },
-  { name: 'mic', label: '麦克风', type: 'line' }, { name: 'location', label: '位置', type: 'line' },
-  { name: 'map', label: '地图', type: 'line' }, { name: 'tag', label: '标签', type: 'line' },
+  { name: 'cut', label: '剪切', type: 'line' }, { name: 'undo', label: '撤销', type: 'line' },
+  { name: 'redo', label: '重做', type: 'line' }, { name: 'reset', label: '重置', type: 'line' },
+  { name: 'refresh', label: '刷新', type: 'line' }, { name: 'sync', label: '同步', type: 'line' },
+  { name: 'export', label: '导出', type: 'line' }, { name: 'import', label: '导入', type: 'line' },
+  { name: 'upload', label: '上传', type: 'line' }, { name: 'download', label: '下载', type: 'line' },
+  // 通知 & 消息
+  { name: 'bell', label: '通知', type: 'line' }, { name: 'bell-off', label: '静音', type: 'line' },
+  { name: 'mail', label: '邮件', type: 'line' }, { name: 'mail-open', label: '已读邮件', type: 'line' },
+  { name: 'send', label: '发送', type: 'solid' }, { name: 'reply', label: '回复', type: 'line' },
+  { name: 'forward-msg', label: '转发', type: 'line' }, { name: 'inbox', label: '收件箱', type: 'line' },
+  { name: 'message', label: '消息', type: 'line' }, { name: 'message-square', label: '对话', type: 'line' },
+  { name: 'comment', label: '评论', type: 'line' }, { name: 'chat', label: '聊天', type: 'solid' },
+  // 文件 & 媒体
+  { name: 'file', label: '文件', type: 'line' }, { name: 'file-text', label: '文档', type: 'line' },
+  { name: 'file-image', label: '图片文件', type: 'line' }, { name: 'file-video', label: '视频文件', type: 'line' },
+  { name: 'folder', label: '文件夹', type: 'line' }, { name: 'folder-open', label: '打开文件夹', type: 'line' },
+  { name: 'image', label: '图片', type: 'line' }, { name: 'images', label: '多图', type: 'line' },
+  { name: 'camera', label: '相机', type: 'line' }, { name: 'video', label: '视频', type: 'solid' },
+  { name: 'mic', label: '麦克风', type: 'line' }, { name: 'mic-off', label: '静音麦克风', type: 'line' },
+  { name: 'music', label: '音乐', type: 'line' }, { name: 'headphones', label: '耳机', type: 'solid' },
+  // 数据 & 图表
+  { name: 'chart-bar', label: '柱状图', type: 'line' }, { name: 'chart-line', label: '折线图', type: 'line' },
+  { name: 'chart-pie', label: '饼图', type: 'solid' }, { name: 'chart-area', label: '面积图', type: 'line' },
+  { name: 'trending-up', label: '上升趋势', type: 'line' }, { name: 'trending-down', label: '下降趋势', type: 'line' },
+  { name: 'activity', label: '活动', type: 'line' }, { name: 'bar-chart', label: '条形图', type: 'line' },
+  { name: 'data', label: '数据', type: 'line' }, { name: 'database', label: '数据库', type: 'line' },
+  { name: 'table', label: '表格', type: 'line' }, { name: 'grid', label: '网格', type: 'line' },
+  { name: 'list', label: '列表', type: 'line' }, { name: 'kanban', label: '看板', type: 'line' },
+  // 布局 & 界面
+  { name: 'layout', label: '布局', type: 'line' }, { name: 'columns', label: '分栏', type: 'line' },
+  { name: 'sidebar', label: '侧边栏', type: 'line' }, { name: 'panel', label: '面板', type: 'line' },
+  { name: 'dock', label: '停靠', type: 'line' }, { name: 'window', label: '窗口', type: 'line' },
+  { name: 'fullscreen', label: '全屏', type: 'line' }, { name: 'minimize', label: '最小化', type: 'line' },
+  { name: 'maximize', label: '最大化', type: 'line' }, { name: 'code', label: '代码', type: 'line' },
+  { name: 'terminal', label: '终端', type: 'solid' }, { name: 'command', label: '命令', type: 'line' },
+  // 表单 & 输入
+  { name: 'input', label: '输入框', type: 'line' }, { name: 'check-square', label: '复选框-选中', type: 'solid' },
+  { name: 'square', label: '复选框-未选', type: 'line' }, { name: 'radio', label: '单选框-选中', type: 'solid' },
+  { name: 'circle', label: '单选框-未选', type: 'line' }, { name: 'toggle-l', label: '开关-左', type: 'line' },
+  { name: 'toggle-r', label: '开关-右', type: 'solid' }, { name: 'slider', label: '滑块', type: 'line' },
+  { name: 'switch', label: '切换', type: 'line' }, { name: 'calendar', label: '日历', type: 'line' },
+  { name: 'date', label: '日期', type: 'line' }, { name: 'time', label: '时间', type: 'line' },
+  // 状态 & 反馈
+  { name: 'heart', label: '收藏', type: 'solid' }, { name: 'star', label: '星标', type: 'solid' },
   { name: 'bookmark', label: '书签', type: 'solid' }, { name: 'flag', label: '旗帜', type: 'line' },
-  { name: 'zap', label: '闪电', type: 'solid' }, { name: 'gift', label: '礼物', type: 'line' }
+  { name: 'tag', label: '标签', type: 'line' }, { name: 'label', label: '标签(圆角)', type: 'solid' },
+  { name: 'info', label: '信息', type: 'line' }, { name: 'alert', label: '警告', type: 'solid' },
+  { name: 'alert-triangle', label: '三角警告', type: 'line' }, { name: 'help-circle', label: '帮助', type: 'line' },
+  { name: 'question', label: '疑问', type: 'solid' }, { name: 'shield', label: '安全盾牌', type: 'line' },
+  { name: 'lock', label: '锁定', type: 'solid' }, { name: 'unlock', label: '解锁', type: 'line' },
+  { name: 'eye', label: '查看', type: 'line' }, { name: 'eye-off', label: '隐藏', type: 'line' },
+  // 连接 & 分享
+  { name: 'share', label: '分享', type: 'line' }, { name: 'share-2', label: '分享(节点)', type: 'line' },
+  { name: 'link', label: '链接', type: 'line' }, { name: 'link-2', label: '链接(链节)', type: 'line' },
+  { name: 'external-link', label: '外链', type: 'line' }, { name: 'qrcode', label: '二维码', type: 'solid' },
+  // 工具 & 辅助
+  { name: 'filter', label: '筛选', type: 'line' }, { name: 'sort', label: '排序', type: 'line' },
+  { name: 'search-plus', label: '放大', type: 'line' }, { name: 'search-minus', label: '缩小', type: 'line' },
+  { name: 'zoom-in', label: '放大镜+', type: 'line' }, { name: 'zoom-out', label: '放大镜-', type: 'line' },
+  { name: 'target', label: '定位', type: 'line' }, { name: 'compass', label: '指南针', type: 'line' },
+  { name: 'map', label: '地图', type: 'line' }, { name: 'map-pin', label: '地图标记', type: 'solid' },
+  { name: 'location', label: '位置', type: 'line' }, { name: 'globe', label: '地球', type: 'line' },
+  // 杂项
+  { name: 'zap', label: '闪电', type: 'solid' }, { name: 'gift', label: '礼物', type: 'line' },
+  { name: 'award', label: '奖项', type: 'solid' }, { name: 'crown', label: '皇冠', type: 'solid' },
+  { name: 'fire', label: '热门', type: 'solid' }, { name: 'sun', label: '日间模式', type: 'line' },
+  { name: 'moon', label: '夜间模式', type: 'solid' }, { name: 'cloud', label: '云', type: 'line' },
+  { name: 'printer', label: '打印', type: 'line' }, { name: 'phone', label: '手机', type: 'line' },
+  { name: 'tablet', label: '平板', type: 'line' }, { name: 'monitor', label: '显示器', type: 'line' },
+  { name: 'watch', label: '手表', type: 'line' }, { name: 'battery', label: '电量', type: 'line' },
+  { name: 'wifi', label: 'WiFi', type: 'line' }, { name: 'bluetooth', label: '蓝牙', type: 'line' },
+  { name: 'credit-card', label: '信用卡', type: 'line' }, { name: 'wallet', label: '钱包', type: 'line' },
+  { name: 'shopping-cart', label: '购物车', type: 'line' }, { name: 'shopping-bag', label: '购物袋', type: 'solid' },
+  { name: 'coffee', label: '咖啡', type: 'line' }, { name: 'clock', label: '时钟', type: 'line' },
+  { name: 'alarm', label: '闹钟', type: 'line' }, { name: 'timer', label: '计时器', type: 'line' }
 ];
 
 function generateIconSet(seed, count) {
@@ -518,7 +591,7 @@ function simulateParseResult(fileName) {
 
   return {
     name: baseName,
-    icons: generateIconSet(seed, 20 + (seedHash(seed) % 20)),
+    icons: generateIconSet(seed, 50 + (seedHash(seed + 'i') % 40)),
     fonts: generateFontSet(seed, 2 + (seedHash(seed + 'f') % 3)),
     components: generateComponentSet(seed, 12 + (seedHash(seed + 'c') % 14)),
     sizes: generateSizeSet(seed, 6 + (seedHash(seed + 's') % 5)),

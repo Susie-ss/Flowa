@@ -8,7 +8,31 @@ function loadDesignSystems() {
     var raw = localStorage.getItem(LS_KEY);
     if (raw) {
       var parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // ===== 兼容性迁移：旧版 DS 数据可能没有 fonts/components/sizes 字段 =====
+        var migrated = false;
+        for (var k = 0; k < parsed.length; k++) {
+          var ds = parsed[k];
+          if (!ds.icons || !ds.icons.length) {
+            ds.icons = generateIconSet(ds.name || 'default', 20 + (seedHash(ds.name || 'default') % 20));
+            migrated = true;
+          }
+          if (!ds.fonts || !ds.fonts.length) {
+            ds.fonts = generateFontSet(ds.name || 'default', 2 + (seedHash((ds.name || 'default') + 'f') % 3));
+            migrated = true;
+          }
+          if (!ds.components || !ds.components.length) {
+            ds.components = generateComponentSet(ds.name || 'default', 12 + (seedHash((ds.name || 'default') + 'c') % 14));
+            migrated = true;
+          }
+          if (!ds.sizes || !ds.sizes.length) {
+            ds.sizes = generateSizeSet(ds.name || 'default', 6 + (seedHash((ds.name || 'default') + 's') % 5));
+            migrated = true;
+          }
+        }
+        if (migrated) saveDesignSystems(parsed);
+        return parsed;
+      }
     }
   } catch (e) { /* ignore */ }
   // 首次加载：返回默认 Mock 数据并保存（每个 DS 携带完整的图标/字体/组件/字号数据）

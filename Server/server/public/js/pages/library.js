@@ -516,11 +516,339 @@ function seedHash(str) {
   return Math.abs(h);
 }
 
-// ===== 开始模拟解析（返回完整数据）=====
+// ===== 真实 Sketch 文件解析（基于 JSZip 前端解压）=====
 window.libParseResult = null;
+
+// 从 zip 中读取 JSON 文件
+function readZipJSON(zip, path) {
+  var file = zip.file(path);
+  if (!file) return null;
+  return file.async('string').then(JSON.parse);
+}
+
+// 递归遍历图层树
+function walkLayers(layers, callback) {
+  if (!layers || !Array.isArray(layers)) return;
+  for (var i = 0; i < layers.length; i++) {
+    var layer = layers[i];
+    if (layer && layer._class) {
+      callback(layer);
+      // 递归子图层
+      if (layer.layers && Array.isArray(layer.layers)) {
+        walkLayers(layer.layers, callback);
+      }
+    }
+  }
+}
+
+// 解析 document.json 中的颜色
+function parseSketchColors(documentData) {
+  var colors = [];
+  try {
+    // 从 colorAssets 提取命名颜色
+    if (documentData.assets && documentData.assets.colorAssets) {
+      documentData.assets.colorAssets.forEach(function(ca) {
+        if (ca.color) {
+          var rgba = ca.color;
+          var r = Math.round((rgba.red || 0) * 255);
+          var g = Math.round((rgba.green || 0) * 255);
+          var b = Math.round((rgba.blue || 0) * 255);
+          var a = rgba.alpha !== undefined ? rgba.alpha : 1;
+          colors.push(a < 1 ? 'rgba(' + r + ',' + g + ',' + b + ',' + a.toFixed(2) + ')' : '#' + [r,g,b].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join(''));
+        }
+      });
+    }
+    // 从文档级颜色变量提取
+    if (documentData.colorSwatches) {
+      documentData.colorSwatches.forEach(function(cs) {
+        if (cs.color) {
+          var rgba = cs.color;
+          var r = Math.round((rgba.red || 0) * 255);
+          var g = Math.round((rgba.green || 0) * 255);
+          var b = Math.round((rgba.blue || 0) * 255);
+          colors.push('#' + [r,g,b].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join(''));
+        }
+      });
+    }
+  } catch(e) {}
+  // 去重
+  return colors.filter(function(c, i){return colors.indexOf(c) === i;}).slice(0, 8);
+}
+
+// 解析 document.json 中的字体
+function parseSketchFonts(documentData) {
+  var fontSet = [];
+  var fontNames = [];
+  try {
+    // 方式1: document.fonts 数组
+    if (documentData.fonts && Array.isArray(documentData.fonts)) {
+      documentData.fonts.forEach(function(f) {
+        var name = '';
+        if (typeof f === 'string') name = f;
+        else if (f.attributes && f.attributes.name) name = f.attributes.name;
+        else if (f.name) name = f.name;
+        if (name && fontNames.indexOf(name) < 0) {
+          fontNames.push(name);
+          var category = 'sans-serif';
+          if (name.match(/mono|code|console/i)) category = 'monospace';
+          else if (name.match(/song|serif|times|georgia/i)) category = 'serif';
+          fontSet.push({ name: name, family: name, weights: ['Regular (400)'], sample: '字体示例', category: category });
+        }
+      });
+    }
+    // 方式2: 从 layerTextStyles 提取
+    if (documentData.layerTextStyles && documentData.layerTextStyles.objects) {
+      documentData.layerTextStyles.objects.forEach(function(obj) {
+        try {
+          var style = obj.style || {};
+          var attrs = (style.encodedAttributes && style.encodedAttributes.attributes) || style.attributes || {};
+          var fontDesc = attrs.font || attrs.MSAttributedStringFontAttribute || {};
+          var name = fontDesc.name || fontDesc.fontName || (fontDesc.attributes && fontDesc.attributes.name) || '';
+          if (name && fontNames.indexOf(name) < 0) {
+            fontNames.push(name);
+            var category = 'sans-serif';
+            if (name.match(/mono|code|console/i)) category = 'monospace';
+            else if (name.match(/song|serif|times|georgia/i)) category = 'serif';
+            fontSet.push({ name: name, family: name, weights: ['Regular (400)'], sample: '字体示例', category: category });
+          }
+        } catch(e2) {}
+      });
+    }
+  } catch(e) {}
+  return fontSet;
+}
+
+// 从页面图层中提取图标（形状图层、SVG、图标命名规范）
+function extractIconsFromPages(pagesData) {
+  var iconNames = [];
+  var iconKeywords = ['icon', 'ico', 'Icon', 'Icons', '图标', 'svg', 'SVG'];
+  // 预定义命名图标池（用于映射图层名到图标定义）
+  var ICON_NAME_MAP = {};
+  // 构建 name→label 映射（从 FULL_ICON_POOL）
+  FULL_ICON_POOL.forEach(function(ic) { ICON_NAME_MAP[ic.name] = ic; });
+
+  pagesData.forEach(function(pageData) {
+    if (!pageData || !pageData.layers) return;
+    walkLayers(pageData.layers, function(layer) {
+      var name = (layer.name || '').trim().toLowerCase();
+      // 检测条件：形状组、矩形、椭圆形、路径，或者名称包含 icon/svg/图标
+      var isShape = ['shapeGroup','shapePath','rectangle','oval','polygon','star','triangle'].indexOf(layer._class) >= 0;
+      var nameHint = iconKeywords.some(function(kw) { return name.indexOf(kw.toLowerCase()) >= 0; });
+      var isSymbolMaster = layer._class === 'symbolMaster';
+
+      if (isShape || nameHint || isSymbolMaster) {
+        // 尝试从 FULL_ICON_POOL 匹配
+        var matched = ICON_NAME_MAP[name] || ICON_NAME_MAP[name.replace(/[^a-z0-9]/g,'')];
+        if (matched) {
+          var key = matched.name;
+          if (iconNames.indexOf(key) < 0) iconNames.push(key);
+        } else if (isShape && name.length > 1 && name.length < 30) {
+          // 用图层名为图标名
+          var safeName = name.replace(/[^a-z0-9\u4e00-\u9fff_-]/g, '');
+          if (safeName && iconNames.indexOf(safeName) < 0 && iconNames.length < 100) {
+            iconNames.push(safeName);
+          }
+        }
+      }
+    });
+  });
+
+  // 去重并映射为 FULL_ICON_POOL 中的定义；未命名的用 label 回退
+  var icons = [];
+  iconNames.forEach(function(k) {
+    var def = ICON_NAME_MAP[k];
+    if (def) {
+      icons.push({ name: def.name, label: def.label, type: def.type });
+    } else {
+      icons.push({ name: k, label: k.charAt(0).toUpperCase() + k.slice(1), type: 'line' });
+    }
+  });
+
+  // 如果图标太少(<=3)，补充随机图标
+  if (icons.length <= 3) {
+    var pool = FULL_ICON_POOL.slice();
+    var needed = Math.min(40, pool.length);
+    for (var i = 0; i < needed && icons.length < needed; i++) {
+      var add = pool[i % pool.length];
+      if (!icons.some(function(ic) { return ic.name === add.name; })) {
+        icons.push({ name: add.name, label: add.label, type: add.type });
+      }
+    }
+  }
+  return icons;
+}
+
+// 从文本图层提取字号和字体
+function extractTextStylesFromPages(pagesData) {
+  var sizeMap = {};  // size → count
+  var fontMap = {};
+
+  pagesData.forEach(function(pageData) {
+    if (!pageData || !pageData.layers) return;
+    walkLayers(pageData.layers, function(layer) {
+      if (layer._class !== 'text') return;
+      try {
+        var attrs = layer.attributedString || {};
+        var attrArr = attrs.attributes || [];
+
+        attrArr.forEach(function(attr) {
+          var a = attr.attributes || {};
+          var fontSize = a.fontSize || a.MSAttributedStringFontAttribute || 0;
+          if (typeof fontSize === 'object') fontSize = fontSize.size || 14;
+          if (fontSize > 5 && fontSize < 200) {
+            var key = Math.round(fontSize);
+            sizeMap[key] = (sizeMap[key] || 0) + 1;
+          }
+          var fontName = (a.font && (a.font.name || a.font.fontName)) || '';
+          if (fontName) fontMap[fontName] = (fontMap[fontName] || 0) + 1;
+        });
+      } catch(e) {}
+    });
+  });
+
+  // 排序并返回字号
+  var sizes = Object.keys(sizeMap).sort(function(a,b){return b-a;}).map(function(px) {
+    var size = parseInt(px);
+    var name = size >= 32 ? '标题 ' + (size >= 48 ? '超大' : Math.ceil(size/8)) :
+               size >= 18 ? '标题 ' + Math.ceil(size/6) :
+               size >= 14 ? '正文' : '小字';
+    return { name: name, tag: 'p', size: px + 'px', lineHeight: Math.round(size * 1.4) + 'px', weight: '400', usage: '自动提取' };
+  });
+
+  return sizes;
+}
+
+// 从 pages 中提取组件（symbolInstance / symbolMaster）
+function extractComponentsFromPages(pagesData) {
+  var compMap = {};
+  var COMP_KEYWORDS = ['button','btn','input','card','modal','dialog','table','form','nav','tab','list','item','badge','tag','header','footer','sidebar','menu','dropdown','picker','slider','switch','checkbox','radio','progress','spinner','alert','toast','tooltip','popover','upload','avatar','chip','chip'];
+
+  pagesData.forEach(function(pageData) {
+    if (!pageData || !pageData.layers) return;
+    walkLayers(pageData.layers, function(layer) {
+      var name = (layer.name || '').trim().toLowerCase();
+      // symbolInstance 或 symbolMaster → 组件
+      if (layer._class === 'symbolInstance' || layer._class === 'symbolMaster') {
+        var cat = '自定义';
+        COMP_KEYWORDS.forEach(function(kw) {
+          if (name.indexOf(kw) >= 0) {
+            cat = kw.charAt(0).toUpperCase() + kw.slice(1);
+            if (cat === 'Btn') cat = '按钮';
+            else if (cat === 'Nav') cat = '导航';
+            else if (['Button','Btn','Input','Card','Modal','Dialog','Table','Form','Tab','List','Item','Badge','Tag','Chip'].indexOf(kw) >= 0) {
+              var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',chip:'展示'};
+              cat = catMap[kw] || '组件';
+            }
+          }
+        });
+        if (!compMap[name]) {
+          compMap[name] = { name: layer.name, category: cat, type: 'symbol', props: name, css: '.custom-symbol' };
+        }
+      }
+      // 组的名称包含组件关键词
+      else if (layer._class === 'group' && name.length > 1 && name.length < 30) {
+        COMP_KEYWORDS.forEach(function(kw) {
+          if (name.indexOf(kw) >= 0 && !compMap[name]) {
+            var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',chip:'展示',header:'布局',footer:'布局',sidebar:'布局',menu:'导航',dropdown:'表单',slider:'表单',switch:'表单',checkbox:'表单',radio:'表单',progress:'反馈',spinner:'反馈',alert:'反馈',toast:'反馈',tooltip:'反馈',popover:'反馈',upload:'表单',avatar:'展示'};
+            compMap[name] = { name: layer.name, category: catMap[kw] || '组件', type: 'group', props: name, css: '.custom-component' };
+          }
+        });
+      }
+    });
+  });
+
+  return Object.keys(compMap).map(function(k) { return compMap[k]; });
+}
+
+// 主解析函数
+function parseSketchFile(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var arrayBuffer = e.target.result;
+        JSZip.loadAsync(arrayBuffer).then(function(zip) {
+          var result = { name: file.name.replace(/\.sketch$/i, ''), icons: [], fonts: [], components: [], sizes: [], colors: [] };
+
+          // 并行读取 document.json 和 pages
+          var docPromise = readZipJSON(zip, 'document.json');
+          var metaPromise = readZipJSON(zip, 'meta.json');
+          var pageFiles = [];
+
+          // 获取所有 pages/*.json
+          zip.forEach(function(path, zipEntry) {
+            if (path.match(/^pages\/.+\.json$/)) {
+              pageFiles.push(readZipJSON(zip, path));
+            }
+          });
+
+          if (pageFiles.length === 0) {
+            // 可能是扁平结构，尝试从根目录找
+            zip.forEach(function(path, zipEntry) {
+              if (path.match(/\.json$/) && path.indexOf('document') < 0 && path.indexOf('meta') < 0 && path.indexOf('user') < 0) {
+                pageFiles.push(readZipJSON(zip, path));
+              }
+            });
+          }
+
+          Promise.all([docPromise, metaPromise].concat(pageFiles)).then(function(values) {
+            var docData = values[0];
+            var metaData = values[1];
+            var pagesData = values.slice(2).filter(Boolean);
+
+            if (docData) {
+              result.name = docData.name || docData.fonts || result.name;
+              if (typeof result.name === 'object') result.name = file.name.replace(/\.sketch$/i, '');
+
+              // 颜色
+              var colors = parseSketchColors(docData);
+              if (colors.length > 0) result.colors = colors;
+
+              // 字体
+              var fonts = parseSketchFonts(docData);
+              if (fonts.length > 0) result.fonts = fonts;
+            }
+
+            // 从页面图层提取数据
+            if (pagesData.length > 0) {
+              result.icons = extractIconsFromPages(pagesData);
+              var sizes = extractTextStylesFromPages(pagesData);
+              if (sizes.length > 0) result.sizes = sizes;
+              var components = extractComponentsFromPages(pagesData);
+              if (components.length > 0) result.components = components;
+            }
+
+            // 如果某些数据为空，补充默认值
+            if (result.icons.length === 0) result.icons = generateIconSet(result.name, 20 + (seedHash(result.name) % 15));
+            if (result.fonts.length === 0) result.fonts = generateFontSet(result.name, 2 + (seedHash(result.name + 'f') % 2));
+            if (result.components.length === 0) result.components = generateComponentSet(result.name, 8 + (seedHash(result.name + 'c') % 10));
+            if (result.sizes.length === 0) result.sizes = generateSizeSet(result.name, 5 + (seedHash(result.name + 's') % 4));
+            if (result.colors.length === 0) {
+              var palettes = [['#5B5EF4','#22C55E','#F59E0B','#EF4444'],['#3B82F6','#10B981','#F97316','#EC4899'],['#8B5CF6','#06B6D4','#14B8A6','#F43F5E']];
+              result.colors = palettes[seedHash(result.name) % palettes.length];
+            }
+
+            resolve(result);
+          }).catch(function(err) {
+            reject(err);
+          });
+        }).catch(function(err) {
+          reject(err);
+        });
+      } catch(err) {
+        reject(err);
+      }
+    };
+    reader.onerror = function() { reject(new Error('文件读取失败')); };
+    reader.readAsArrayBuffer(file);
+  });
+}
 
 window.startLibraryParse = function() {
   if (!window.libSelectedFile) return;
+
+  var file = window.libSelectedFile;
+  var ext = '.' + file.name.split('.').pop().toLowerCase();
 
   // 切换到解析步骤
   var stepUpload = document.getElementById('lib-step-upload');
@@ -530,25 +858,50 @@ window.startLibraryParse = function() {
 
   // 显示文件名
   var filenameEl = document.getElementById('lib-parse-filename');
-  if (filenameEl && window.libSelectedFile) {
+  if (filenameEl && file) {
     filenameEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13,2 13,9 20,9"/></svg> ' +
-      '<span>' + escapeHTML(window.libSelectedFile.name) + '</span>';
+      '<span>' + escapeHTML(file.name) + '</span>';
   }
 
-  // 模拟逐步解析
-  parseStages.forEach(function(stage, i) {
-    setTimeout(function() {
-      updateParseStage(i);
-
-      if (i === parseStages.length - 1) {
-        // 解析完成
-        setTimeout(function() {
-          window.libParseResult = simulateParseResult(window.libSelectedFile.name);
-          showParseDoneResult(window.libParseResult);
-        }, 500);
-      }
-    }, (i + 1) * 800);
-  });
+  if (ext === '.sketch') {
+    // ===== 真实解析 sketch 文件 =====
+    var stageTimer = 0;
+    parseStages.forEach(function(stage, i) {
+      var delay = (i + 1) * 600;
+      setTimeout(function() {
+        updateParseStage(i);
+        if (i === parseStages.length - 1) {
+          // 触发真实解析
+          setTimeout(function() {
+            updateParseStage(i);
+            parseSketchFile(file).then(function(result) {
+              window.libParseResult = result;
+              showParseDoneResult(result);
+            }).catch(function(err) {
+              console.error('Sketch parse error:', err);
+              // 失败时回退到模拟解析
+              window.libParseResult = simulateParseResult(file.name);
+              showParseDoneResult(window.libParseResult);
+              showToast('文件解析部分失败，已使用估算数据', 'warning');
+            });
+          }, 200);
+        }
+      }, delay);
+    });
+  } else {
+    // ===== .psd / .rp → 模拟解析回退 =====
+    parseStages.forEach(function(stage, i) {
+      setTimeout(function() {
+        updateParseStage(i);
+        if (i === parseStages.length - 1) {
+          setTimeout(function() {
+            window.libParseResult = simulateParseResult(file.name);
+            showParseDoneResult(window.libParseResult);
+          }, 500);
+        }
+      }, (i + 1) * 800);
+    });
+  }
 };
 
 function updateParseStage(stageIndex) {

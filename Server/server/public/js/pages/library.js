@@ -106,7 +106,15 @@ function restoreHeaderDefault() {
 
 function renderLibraryHTML() {
   var cardsHTML = designSystems.map(function(ds) {
-    return '<div class="ds-card" data-id="' + ds.id + '">' +
+    return '<div class="ds-card" data-id="' + ds.id + '" onclick="openDSDetail(\'' + ds.id + '\')">' +
+      '<div class="ds-card-actions" onclick="event.stopPropagation()">' +
+        '<button class="ds-action-btn ds-rename-btn" title="重命名" onclick="renameDesignSystem(\'' + ds.id + '\')">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+        '</button>' +
+        '<button class="ds-action-btn ds-delete-btn" title="删除" onclick="deleteDesignSystem(\'' + ds.id + '\')">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>' +
+        '</button>' +
+      '</div>' +
       '<div class="ds-colors">' + ds.colors.map(function(c) {
         return '<span class="color-dot" style="background:' + c + '"></span>';
       }).join('') + '</div>' +
@@ -114,8 +122,8 @@ function renderLibraryHTML() {
       '<p class="ds-desc">' + escapeHTML(ds.description) + '</p>' +
       (ds.source ? '<p class="ds-source">来源: ' + escapeHTML(ds.source) + '</p>' : '') +
       '<div class="ds-meta">' +
-        '<span>' + ds.componentCount + ' 组件</span>' +
-        '<span>' + ds.colorCount + ' 色值</span>' +
+        '<span>' + (ds.componentCount || (ds.components ? ds.components.length : 0)) + ' 组件</span>' +
+        '<span>' + (ds.colorCount || (ds.colors ? ds.colors.length : 0)) + ' 色值</span>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -133,6 +141,97 @@ function renderLibraryHTML() {
     '<div class="design-systems-grid">' + (cardsHTML || '<div class="empty-state"><p>暂无组件库</p></div>') + '</div>' +
   '</div>';
 }
+
+// ===== 组件库卡片操作 =====
+function openDSDetail(id) {
+  navigateTo('library-detail', { id: id });
+}
+
+window.deleteDesignSystem = function(id) {
+  if (!confirm('确定要删除此组件库吗？此操作不可恢复。')) return;
+
+  var idx = -1;
+  for (var i = 0; i < designSystems.length; i++) {
+    if (designSystems[i].id === id) { idx = i; break; }
+  }
+  if (idx === -1) { showToast('未找到该组件库', 'error'); return; }
+
+  var name = designSystems[idx].name;
+  designSystems.splice(idx, 1);
+  saveDesignSystems(designSystems);
+
+  // 如果当前在详情页且删除的是当前查看的 DS，返回列表
+  if (currentDS && currentDS.id === id) {
+    navigateTo('library');
+  } else {
+    renderLibraryPage();
+  }
+  showToast('已删除组件库「' + name + '」', 'success');
+};
+
+window.renameDesignSystem = function(id) {
+  var ds = null;
+  for (var i = 0; i < designSystems.length; i++) {
+    if (designSystems[i].id === id) { ds = designSystems[i]; break; }
+  }
+  if (!ds) { showToast('未找到该组件库', 'error'); return; }
+
+  // 重命名弹窗
+  var modalId = 'rename-library-modal';
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active';
+  overlay.id = modalId;
+  overlay.innerHTML =
+    '<div class="modal" style="max-width:400px" onclick="event.stopPropagation()">' +
+      '<div class="modal-header">' +
+        '<h3>重命名组件库</h3>' +
+        '<button class="modal-close-btn" onclick="document.getElementById(\'' + modalId + '\').remove()">' +
+          '<svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#close"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<div style="padding:16px 20px">' +
+        '<div class="form-row">' +
+          '<label>名称</label>' +
+          '<input type="text" id="rename-lib-input" value="' + escapeHTML(ds.name) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none" />' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-actions" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">' +
+        '<button class="btn btn-ghost" onclick="document.getElementById(\'' + modalId + '\').remove()">取消</button>' +
+        '<button class="btn btn-primary" onclick="confirmRename(\'' + id + '\')">确认</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  setTimeout(function() {
+    var inp = document.getElementById('rename-lib-input');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 100);
+};
+
+window.confirmRename = function(id) {
+  var inp = document.getElementById('rename-lib-input');
+  if (!inp) return;
+  var newName = inp.value.trim();
+  if (!newName) { showToast('名称不能为空', 'error'); return; }
+
+  for (var i = 0; i < designSystems.length; i++) {
+    if (designSystems[i].id === id) {
+      designSystems[i].name = newName;
+      saveDesignSystems(designSystems);
+      // 刷新界面
+      var modal = document.getElementById('rename-library-modal');
+      if (modal) modal.remove();
+      if (currentDS && currentDS.id === id) {
+        // 在详情页，重新渲染详情
+        renderDesignSystemDetail(id);
+      } else {
+        renderLibraryPage();
+      }
+      showToast('已重命名为「' + newName + '」', 'success');
+      return;
+    }
+  }
+  showToast('未找到该组件库', 'error');
+};
 
 // ===== 新建组件库弹窗 =====
 function showNewLibraryModal() {
@@ -1269,6 +1368,16 @@ function renderDetailHTML(ds) {
           '<h2>' + escapeHTML(dsName) + '</h2>' +
           '<p class="text-muted">' + dsDesc + '</p>' +
         '</div>' +
+      '</div>' +
+      '<div class="ds-header-actions">' +
+        '<button class="btn btn-ghost" onclick="renameDesignSystem(\'' + ds.id + '\')" title="重命名">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+          ' 重命名' +
+        '</button>' +
+        '<button class="btn btn-ghost" onclick="deleteDesignSystem(\'' + ds.id + '\')" title="删除" style="color:#EF4444">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>' +
+          ' 删除' +
+        '</button>' +
       '</div>' +
     '</div>' +
 

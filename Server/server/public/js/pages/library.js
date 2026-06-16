@@ -82,28 +82,14 @@ function renderLibraryPage() {
   var mainContent = document.getElementById('main-content');
   if (!mainContent) return;
 
-  // 更新 header 右侧按钮为"新建组件库"
-  updateHeaderForLibrary();
+  // 新建组件库按钮已移至页面标题行（renderLibraryHTML 中）
+  // updateHeaderForLibrary(); // 不再需要操作 header-right
 
   mainContent.innerHTML = renderLibraryHTML();
 }
 
 function updateHeaderForLibrary() {
-  var headerRight = document.querySelector('.header-right');
-  if (!headerRight) return;
-
-  // 检查是否已经有新建组件库按钮，避免重复添加
-  if (headerRight.querySelector('.library-new-btn')) return;
-
-  // 隐藏原有的下载插件等按钮，显示新建组件库
-  var existingBtns = headerRight.querySelectorAll(':scope > *');
-  existingBtns.forEach(function(btn) { btn.style.display = 'none'; });
-
-  var newBtn = document.createElement('button');
-  newBtn.className = 'btn btn-primary library-new-btn';
-  newBtn.innerHTML = '<svg class="icon-color icon-sm"><use href="/libs/iconpark/icons.svg#ico-plus"/></svg> 新建组件库';
-  newBtn.onclick = function() { showNewLibraryModal(); };
-  headerRight.appendChild(newBtn);
+  // 新建组件库按钮已内嵌到 .library-header 中，此函数保留为空壳
 }
 
 function restoreHeaderDefault() {
@@ -140,6 +126,9 @@ function renderLibraryHTML() {
         '<h2>组件库</h2>' +
         '<p class="library-desc">管理你的设计系统和组件资产</p>' +
       '</div>' +
+      '<button class="btn btn-primary library-new-btn" onclick="showNewLibraryModal()">' +
+        '<svg class="icon-color icon-sm"><use href="/libs/iconpark/icons.svg#ico-plus"/></svg> 新建组件库' +
+      '</button>' +
     '</div>' +
     '<div class="design-systems-grid">' + (cardsHTML || '<div class="empty-state"><p>暂无组件库</p></div>') + '</div>' +
   '</div>';

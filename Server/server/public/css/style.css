@@ -2762,6 +2762,51 @@ button {
   color: var(--text-muted);
 }
 
+/* 组件库卡片操作按钮 */
+.ds-card {
+  position: relative;
+}
+
+.ds-card-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 2;
+}
+
+.ds-card:hover .ds-card-actions {
+  opacity: 1;
+}
+
+.ds-action-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  transition: all .15s;
+}
+
+.ds-rename-btn:hover {
+  background: rgba(91,94,244,.1);
+  color: var(--primary);
+}
+
+.ds-delete-btn:hover {
+  background: rgba(239,68,68,.1);
+  color: #EF4444;
+}
+
 /* ===== Library Upload Zone ===== */
 .upload-zone {
   border: 2px dashed var(--border);
@@ -2944,6 +2989,8 @@ button {
   color: var(--text); margin-bottom: 4px;
 }
 .ds-back-btn { font-size: 13px !important; }
+
+.ds-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 /* Tabs */
 .ds-tabs {

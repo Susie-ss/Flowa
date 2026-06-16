@@ -11,14 +11,26 @@ function loadDesignSystems() {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (e) { /* ignore */ }
-  // 首次加载：返回默认 Mock 数据并保存
+  // 首次加载：返回默认 Mock 数据并保存（每个 DS 携带完整的图标/字体/组件/字号数据）
   var defaultDS = [
-    { id:'1', name:'企业后台设计系统', description:'包含按钮、表单、表格等基础组件', componentCount:48, colorCount:12, createdAt:'2024-01-15', colors:['#5B5EF4','#22C55E','#F59E0B','#EF4444','#8B5CF6'] },
-    { id:'2', name:'移动端组件库', description:'适用于移动端 App 的组件设计', componentCount:32, colorCount:8, createdAt:'2024-02-20', colors:['#3B82F6','#10B981','#F59E0B','#EC4899'] },
-    { id:'3', name:'营销页面组件', description:'落地页、活动页常用组件', componentCount:24, colorCount:6, createdAt:'2024-03-10', colors:['#8B5CF6','#06B6D4','#F97316','#14B8A6'] }
+    enrichWithDetailData({ id:'1', name:'企业后台设计系统', description:'包含按钮、表单、表格等基础组件', componentCount:48, colorCount:12, createdAt:'2024-01-15', colors:['#5B5EF4','#22C55E','#F59E0B','#EF4444','#8B5CF6'] }, 1),
+    { id:'2', name:'移动端组件库', description:'适用于移动端 App 的组件设计', componentCount:32, colorCount:8, createdAt:'2024-02-20', colors:['#3B82F6','#10B981','#F59E0B','#EC4899'], source:null,
+      icons: generateIconSet('mobile', 28), fonts: generateFontSet('mobile', 3), components: generateComponentSet('mobile', 14), sizes: generateSizeSet('mobile', 9) },
+    { id:'3', name:'营销页面组件', description:'落地页、活动页常用组件', componentCount:24, colorCount:6, createdAt:'2024-03-10', colors:['#8B5CF6','#06B6D4','#F97316','#14B8A6'], source:null,
+      icons: generateIconSet('marketing', 22), fonts: generateFontSet('marketing', 3), components: generateComponentSet('marketing', 12), sizes: generateSizeSet('marketing', 7) }
   ];
   saveDesignSystems(defaultDS);
   return defaultDS;
+}
+
+// 为企业后台设计系统生成完整数据（使用默认 mock 数据）
+function enrichWithDetailData(ds, seed) {
+  ds.source = null;
+  ds.icons = generateIconSet('enterprise', 32);
+  ds.fonts = generateFontSet('enterprise', 4);
+  ds.components = generateComponentSet('enterprise', 16);
+  ds.sizes = generateSizeSet('enterprise', 9);
+  return ds;
 }
 
 function saveDesignSystems(list) {
@@ -282,7 +294,143 @@ window.clearLibSelectedFile = function() {
   if (fileInput) fileInput.value = '';
 };
 
-// ===== 开始模拟解析 =====
+// ===== 基于种子生成差异化数据 =====
+// 全量图标池
+var FULL_ICON_POOL = [
+  { name: 'home', label: '首页', type: 'line' }, { name: 'search', label: '搜索', type: 'line' },
+  { name: 'settings', label: '设置', type: 'solid' }, { name: 'user', label: '用户', type: 'line' },
+  { name: 'heart', label: '收藏', type: 'solid' }, { name: 'bell', label: '通知', type: 'line' },
+  { name: 'mail', label: '邮件', type: 'line' }, { name: 'calendar', label: '日历', type: 'line' },
+  { name: 'upload', label: '上传', type: 'line' }, { name: 'download', label: '下载', type: 'line' },
+  { name: 'edit', label: '编辑', type: 'solid' }, { name: 'delete', label: '删除', type: 'line' },
+  { name: 'share', label: '分享', type: 'line' }, { name: 'lock', label: '锁定', type: 'solid' },
+  { name: 'unlock', label: '解锁', type: 'line' }, { name: 'eye', label: '查看', type: 'line' },
+  { name: 'eye-off', label: '隐藏', type: 'line' }, { name: 'plus', label: '添加', type: 'solid' },
+  { name: 'minus', label: '减少', type: 'solid' }, { name: 'check', label: '确认', type: 'solid' },
+  { name: 'close', label: '关闭', type: 'solid' }, { name: 'arrow-up', label: '上箭头', type: 'line' },
+  { name: 'arrow-down', label: '下箭头', type: 'line' }, { name: 'arrow-left', label: '左箭头', type: 'line' },
+  { name: 'arrow-right', label: '右箭头', type: 'line' }, { name: 'refresh', label: '刷新', type: 'line' },
+  { name: 'copy', label: '复制', type: 'line' }, { name: 'paste', label: '粘贴', type: 'line' },
+  { name: 'link', label: '链接', type: 'line' }, { name: 'image', label: '图片', type: 'line' },
+  { name: 'video', label: '视频', type: 'solid' }, { name: 'folder', label: '文件夹', type: 'line' },
+  { name: 'star', label: '星标', type: 'solid' }, { name: 'filter', label: '筛选', type: 'line' },
+  { name: 'sort', label: '排序', type: 'line' }, { name: 'grid', label: '网格', type: 'line' },
+  { name: 'list', label: '列表', type: 'line' }, { name: 'camera', label: '相机', type: 'line' },
+  { name: 'mic', label: '麦克风', type: 'line' }, { name: 'location', label: '位置', type: 'line' },
+  { name: 'map', label: '地图', type: 'line' }, { name: 'tag', label: '标签', type: 'line' },
+  { name: 'bookmark', label: '书签', type: 'solid' }, { name: 'flag', label: '旗帜', type: 'line' },
+  { name: 'zap', label: '闪电', type: 'solid' }, { name: 'gift', label: '礼物', type: 'line' }
+];
+
+function generateIconSet(seed, count) {
+  var hash = seedHash(seed);
+  // 根据哈希从全量池中选取不同的子集
+  var pool = FULL_ICON_POOL.slice();
+  // Fisher-Yates shuffle based on hash
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = (hash + i * 17) % (i + 1);
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+  return pool.slice(0, count || 32);
+}
+
+var FONT_TEMPLATES = [
+  { bases: [['PingFang SC','sans-serif',['Regular (400)','Medium (500)','Semibold (600)'],'原型协作平台','系统字体'],
+             ['Inter','sans-serif',['Regular (400)','Medium (500)','Bold (700)'],'ProtoPlatform Design','西文字体'],
+             ['Noto Sans SC','sans-serif',['Regular (400)','Medium (500)'],'高质量设计系统','中文字体'],
+             ['Roboto Mono','monospace',['Regular (400)','Medium (500)'],'const value = 42;','等宽字体'],
+             ['DIN Alternate','sans-serif',['Bold (700)','Medium (500)'],'1234567890','数字字体'],
+             ['Source Han Serif','serif',['Regular (400)','Semibold (600)'],'衬线字体展示','中文衬线']] }
+];
+
+function generateFontSet(seed, count) {
+  var hash = seedHash(seed);
+  var templates = FONT_TEMPLATES[0].bases;
+  var result = [];
+  for (var i = 0; i < (count || 4); i++) {
+    var t = templates[(hash + i * 31) % templates.length];
+    result.push({ name: t[0], family: t[1], weights: t[2].slice(), sample: t[3], category: t[4] });
+  }
+  return result;
+}
+
+var COMPONENT_TEMPLATES = [
+  { name:'主按钮', category:'按钮', type:'primary', props:'Primary Button', css:'.btn-primary{background:COLOR;color:#fff}' },
+  { name:'次要按钮', category:'按钮', type:'ghost', props:'Secondary Button', css:'.btn-ghost{border:1px solid #E8AEF}' },
+  { name:'危险按钮', category:'按钮', type:'danger', props:'Danger Button', css:'.btn-danger{background:#FF6B6B}' },
+  { name:'小按钮', category:'按钮', type:'sm', props:'Small Button', css:'.btn-sm{padding:4px 10px;font-size:12px}' },
+  { name:'图标按钮', category:'按钮', type:'icon-btn', props:'⚙', css:'.icon-btn{width:32px;height:32px;border-radius:8px}' },
+  { name:'输入框', category:'表单', type:'input', props:'Placeholder text', css:'.input{border:1px solid #E8AEF}' },
+  { name:'下拉选择', category:'表单', type:'select', props:'请选择', css:'select{appearance:none}' },
+  { name:'多行文本', category:'表单', type:'textarea', props:'请输入描述...', css:'textarea{resize:vertical}' },
+  { name:'复选框', category:'表单', type:'checkbox', props:'☑ 选项文本', css:'input[type=checkbox]{}' },
+  { name:'开关', category:'表单', type:'toggle', props:'○ / ●', css:'.toggle{width:40px;height:24px}' },
+  { name:'卡片', category:'容器', type:'card', props:'Card Container', css:'.card{border-radius:12px}' },
+  { name:'弹窗', category:'容器', type:'modal', props:'Modal Dialog', css:'.modal{max-width:480px}' },
+  { name:'抽屉', category:'容器', type:'drawer', props:'Drawer Panel', css:'.drawer{width:320px}' },
+  { name:'标签', category:'展示', type:'badge', props:'New', css:'.badge{font-size:10px;padding:2px 6px}' },
+  { name:'头像', category:'展示', type:'avatar', props:'U', css:'.avatar{border-radius:50%}' },
+  { name:'导航项', category:'导航', type:'nav-item', props:'菜单项', css:'.nav-item{padding:10px 12px}' },
+  { name:'面包屑', category:'导航', type:'breadcrumb', props:'首页 > 项目 > 详情', css:'.breadcrumb{gap:8px}' },
+  { name:'分页', category:'导航', type:'pagination', props:'« 1 2 3 ... »', css:'.pagination{gap:4px}' },
+  { name:'提示框', category:'反馈', type:'tooltip', props:'提示信息', css:'.tooltip{position:absolute}' },
+  { name:'加载中', category:'反馈', type:'spinner', props:'⏳ Loading...', css:'@keyframes spin{to{rotate:360deg}}' },
+  { name:'空状态', category:'反馈', type:'empty', props:'暂无数据', css:'.empty{text-align:center}' },
+  { name:'进度条', category:'反馈', type:'progress-bar', props:'███████░░', css:'.progress{height:6px;border-radius:3px}' },
+  { name:'表格', category:'数据', type:'table', props:'| 表头 | 数据 |', css:'.table{width:100%}' },
+  { name:'标签页', category:'导航', type:'tabs', props:'Tab1 | Tab2', css:'.tabs{border-bottom:1px solid #eee}' },
+  { name:'步骤条', category:'导航', type:'steps', props:'① → ② → ③', css:'.steps{display:flex}' },
+  { name:'时间线', category:'展示', type:'timeline', props:'— 今天 —', css:'.timeline{border-left:2px solid #eee}' },
+  { name:'统计卡片', category:'展示', type:'stat-card', props:'1,234 访问', css:'.stat-card{padding:20px}' },
+  { name:'头像组', category:'展示', type:'avatar-group', props:'👤👤👤+3', css:'.avatar-group{display:flex}' },
+  { name:'评分', category:'反馈', type:'rating', props:'★★★★☆', css:'.rating{color:#F59E0B}' }
+];
+
+function generateComponentSet(seed, count) {
+  var hash = seedHash(seed);
+  var pool = COMPONENT_TEMPLATES.slice();
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = (hash + i * 23) % (i + 1);
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+  return pool.slice(0, count || 16).map(function(c) { return { name:c.name, category:c.category, type:c.type, props:c.props, css:c.css }; });
+}
+
+var SIZE_TEMPLATES = [
+  { name:'标题 1', tag:'h1', size:'32px', lineHeight:'40px', weight:'600', usage:'页面主标题' },
+  { name:'标题 2', tag:'h2', size:'24px', lineHeight:'32px', weight:'600', usage:'区块标题' },
+  { name:'标题 3', tag:'h3', size:'18px', lineHeight:'26px', weight:'600', usage:'卡片标题' },
+  { name:'标题 4', tag:'h4', size:'16px', lineHeight:'24px', weight:'600', usage:'段落标题' },
+  { name:'正文大', tag:'p-lg', size:'15px', lineHeight:'22px', weight:'400', usage:'大段正文' },
+  { name:'正文', tag:'p', size:'14px', lineHeight:'20px', weight:'400', usage:'常规正文' },
+  { name:'正文小', tag:'p-sm', size:'13px', lineHeight:'18px', weight:'400', usage:'辅助文本' },
+  { name:'说明文字', tag:'caption', size:'12px', lineHeight:'16px', weight:'400', usage:'说明/标注' },
+  { name:'微小文字', tag:'tiny', size:'10px', lineHeight:'14px', weight:'400', usage:'角标/水印' },
+  { name:'超大标题', tag:'display', size:'48px', lineHeight:'56px', weight:'700', usage:'落地页主标题' }
+];
+
+function generateSizeSet(seed, count) {
+  var hash = seedHash(seed);
+  var pool = SIZE_TEMPLATES.slice();
+  // Use a deterministic selection
+  var result = [];
+  for (var i = 0; i < (count || 9); i++) {
+    result.push(SIZE_TEMPLATES[(hash + i * 7) % SIZE_TEMPLATES.length]);
+  }
+  return result;
+}
+
+// 简单字符串哈希（确定性）
+function seedHash(str) {
+  var h = 0;
+  for (var i = 0; i < str.length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h = h & h; // Convert to 32bit integer
+  }
+  return Math.abs(h);
+}
+
+// ===== 开始模拟解析（返回完整数据）=====
 window.libParseResult = null;
 
 window.startLibraryParse = function() {
@@ -343,21 +491,25 @@ function updateParseStage(stageIndex) {
 }
 
 function simulateParseResult(fileName) {
-  var baseName = fileName.replace(/\.(sketch|psd|rp)$/i, '');
-  var hash = baseName.split('').reduce(function(acc, c) { return acc + c.charCodeAt(0); }, 0);
+  var baseName = fileName.replace(/\.(sketch|psd|rp)$/i, '') || '未命名组件库';
+  // 用文件名作为种子，确保同一文件每次解析结果一致
+  var seed = baseName;
   var colorPalettes = [
     ['#5B5EF4', '#22C55E', '#F59E0B', '#EF4444'],
     ['#3B82F6', '#10B981', '#F97316', '#EC4899'],
-    ['#8B5CF6', '#06B6D4', '#14B8A6', '#F43F5E']
+    ['#8B5CF6', '#06B6D4', '#14B8A6', '#F43F5E'],
+    ['#0EA5E9', '#84CC16', '#F97316', '#EC4899'],
+    ['#6366F1', '#14B8A6', '#F59E0B', '#EF4444']
   ];
+  var paletteIdx = seedHash(seed) % colorPalettes.length;
 
   return {
-    name: baseName || '未命名组件库',
-    icons: 20 + (hash % 20),
-    fonts: 2 + (hash % 4),
-    components: 12 + (hash % 20),
-    sizes: 6 + (hash % 5),
-    colors: colorPalettes[hash % colorPalettes.length]
+    name: baseName,
+    icons: generateIconSet(seed, 20 + (seedHash(seed) % 20)),
+    fonts: generateFontSet(seed, 2 + (seedHash(seed + 'f') % 3)),
+    components: generateComponentSet(seed, 12 + (seedHash(seed + 'c') % 14)),
+    sizes: generateSizeSet(seed, 6 + (seedHash(seed + 's') % 5)),
+    colors: colorPalettes[paletteIdx]
   };
 }
 
@@ -367,14 +519,14 @@ function showParseDoneResult(result) {
   if (stepParsing) stepParsing.style.display = 'none';
   if (stepDone) stepDone.style.display = '';
 
-  // 填充统计数字
+  // 填充统计数字（result.icons/fonts/components/sizes 现在是数组）
   var statsEl = document.getElementById('lib-parse-stats');
   if (statsEl) {
     statsEl.innerHTML =
-      '<div class="parse-stat"><span class="parse-stat-value">' + result.icons + '</span><span class="parse-stat-label">图标</span></div>' +
-      '<div class="parse-stat"><span class="parse-stat-value">' + result.fonts + '</span><span class="parse-stat-label">字体</span></div>' +
-      '<div class="parse-stat"><span class="parse-stat-value">' + result.components + '</span><span class="parse-stat-label">组件</span></div>' +
-      '<div class="parse-stat"><span class="parse-stat-value">' + result.sizes + '</span><span class="parse-stat-label">字号</span></div>';
+      '<div class="parse-stat"><span class="parse-stat-value">' + result.icons.length + '</span><span class="parse-stat-label">图标</span></div>' +
+      '<div class="parse-stat"><span class="parse-stat-value">' + result.fonts.length + '</span><span class="parse-stat-label">字体</span></div>' +
+      '<div class="parse-stat"><span class="parse-stat-value">' + result.components.length + '</span><span class="parse-stat-label">组件</span></div>' +
+      '<div class="parse-stat"><span class="parse-stat-value">' + result.sizes.length + '</span><span class="parse-stat-label">字号</span></div>';
   }
 
   // 填充色板
@@ -398,12 +550,17 @@ window.confirmCreateLibrary = function() {
   var newDS = {
     id: String(Date.now()),
     name: libraryName,
-    description: '从 ' + (window.libSelectedFile ? window.libSelectedFile.name : '设计文件') + ' 解析生成的组件库，包含 ' + window.libParseResult.icons + ' 图标、' + window.libParseResult.fonts + ' 字体、' + window.libParseResult.components + ' 组件',
-    componentCount: window.libParseResult.components,
+    description: '从 ' + (window.libSelectedFile ? window.libSelectedFile.name : '设计文件') + ' 解析生成的组件库，包含 ' + window.libParseResult.icons.length + ' 图标、' + window.libParseResult.fonts.length + ' 字体、' + window.libParseResult.components.length + ' 组件',
+    componentCount: window.libParseResult.components.length,
     colorCount: window.libParseResult.colors.length,
     createdAt: new Date().toISOString().split('T')[0],
     colors: window.libParseResult.colors.slice(),
-    source: window.libSelectedFile ? window.libSelectedFile.name : null
+    source: window.libSelectedFile ? window.libSelectedFile.name : null,
+    // 存储完整的解析数据，详情页使用这些数据渲染
+    icons: window.libParseResult.icons.slice(),
+    fonts: window.libParseResult.fonts.slice(),
+    components: window.libParseResult.components.slice(),
+    sizes: window.libParseResult.sizes.slice()
   };
 
   // 添加到列表头部
@@ -443,46 +600,11 @@ window.showNewLibraryModal = showNewLibraryModal;
 // ===== 设计系统详情页 - 4个Tab =====
 
 var currentDSTab = 'icons'; // icons | fonts | components | sizes
+var currentDS = null;       // 当前正在查看的设计系统对象
 var dsIconSearch = '';
 var dsIconFilter = 'all'; // all | line | solid
 
-// Mock 图标数据 (32个)
-var mockIcons = [
-  { name: 'home', label: '首页', type: 'line' },
-  { name: 'search', label: '搜索', type: 'line' },
-  { name: 'settings', label: '设置', type: 'solid' },
-  { name: 'user', label: '用户', type: 'line' },
-  { name: 'heart', label: '收藏', type: 'solid' },
-  { name: 'bell', label: '通知', type: 'line' },
-  { name: 'mail', label: '邮件', type: 'line' },
-  { name: 'calendar', label: '日历', type: 'line' },
-  { name: 'upload', label: '上传', type: 'line' },
-  { name: 'download', label: '下载', type: 'line' },
-  { name: 'edit', label: '编辑', type: 'solid' },
-  { name: 'delete', label: '删除', type: 'line' },
-  { name: 'share', label: '分享', type: 'line' },
-  { name: 'lock', label: '锁定', type: 'solid' },
-  { name: 'unlock', label: '解锁', type: 'line' },
-  { name: 'eye', label: '查看', type: 'line' },
-  { name: 'eye-off', label: '隐藏', type: 'line' },
-  { name: 'plus', label: '添加', type: 'solid' },
-  { name: 'minus', label: '减少', type: 'solid' },
-  { name: 'check', label: '确认', type: 'solid' },
-  { name: 'close', label: '关闭', type: 'solid' },
-  { name: 'arrow-up', label: '上箭头', type: 'line' },
-  { name: 'arrow-down', label: '下箭头', type: 'line' },
-  { name: 'arrow-left', label: '左箭头', type: 'line' },
-  { name: 'arrow-right', label: '右箭头', type: 'line' },
-  { name: 'refresh', label: '刷新', type: 'line' },
-  { name: 'copy', label: '复制', type: 'line' },
-  { name: 'paste', label: '粘贴', type: 'line' },
-  { name: 'link', label: '链接', type: 'line' },
-  { name: 'image', label: '图片', type: 'line' },
-  { name: 'video', label: '视频', type: 'solid' },
-  { name: 'folder', label: '文件夹', type: 'line' }
-];
-
-// SVG 图标映射
+// SVG 图标映射（覆盖全量池中所有图标名）
 var iconSVGMap = {
   home: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>',
   search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
@@ -515,49 +637,69 @@ var iconSVGMap = {
   link: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
   image: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>',
   video: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
-  folder: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>'
+  folder: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>',
+  star: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>',
+  filter: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/></svg>',
+  sort: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="21" y2="12"/><line x1="11" y1="18" x2="21" y2="18"/></svg>',
+  grid: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+  list: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+  camera: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  mic: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+  location: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  map: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2 1,6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  tag: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+  bookmark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+  flag: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-3V3s-1 1-4 1-5-2-8-2-4 1-4 3z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
+  zap: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/></svg>',
+  gift: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,12 20,22 4,22 4,12"/><rect x="2" y="7" width="20" height="5" rx="2"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>'
 };
 
-// Mock 字体数据
-var mockFonts = [
+// 默认字体数据（fallback）
+var DEFAULT_FONTS = [
   { name: 'PingFang SC', family: 'sans-serif', weights: ['Regular (400)', 'Medium (500)', 'Semibold (600)'], sample: '原型协作平台', category: '系统字体' },
   { name: 'Inter', family: 'sans-serif', weights: ['Regular (400)', 'Medium (500)', 'Bold (700)'], sample: 'ProtoPlatform Design', category: '西文字体' },
   { name: 'Noto Sans SC', family: 'sans-serif', weights: ['Regular (400)', 'Medium (500)'], sample: '高质量设计系统', category: '中文字体' },
   { name: 'Roboto Mono', family: 'monospace', weights: ['Regular (400)', 'Medium (500)'], sample: 'const value = 42;', category: '等宽字体' }
 ];
 
-// Mock 组件样式数据
-var mockComponents = [
-  { name: '主按钮', category: '按钮', type: 'primary', props: 'Primary Button', css: '.btn-primary { background: #5B5EF4; color: #fff; }' },
-  { name: '次要按钮', category: '按钮', type: 'ghost', props: 'Secondary Button', css: '.btn-ghost { border: 1px solid #E8EAEF; }' },
-  { name: '危险按钮', category: '按钮', type: 'danger', props: 'Danger Button', css: '.btn-danger { background: #FF6B6B; }' },
-  { name: '小按钮', category: '按钮', type: 'sm', props: 'Small Button', css: '.btn-sm { padding: 4px 10px; font-size: 12px; }' },
-  { name: '输入框', category: '表单', type: 'input', props: 'Placeholder text', css: '.input { border: 1px solid #E8EAEF; }' },
-  { name: '下拉选择', category: '表单', type: 'select', props: '请选择', css: 'select { appearance: none; }' },
-  { name: '多行文本', category: '表单', type: 'textarea', props: '请输入描述...', css: 'textarea { resize: vertical; }' },
-  { name: '复选框', category: '表单', type: 'checkbox', props: '☑ 选项文本', css: 'input[type=checkbox] {}' },
-  { name: '卡片', category: '容器', type: 'card', props: 'Card Container', css: '.card { border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }' },
-  { name: '弹窗', category: '容器', type: 'modal', props: 'Modal Dialog', css: '.modal { max-width: 480px; }' },
-  { name: '标签', category: '展示', type: 'badge', props: 'New', css: '.badge { font-size: 10px; padding: 2px 6px; }' },
-  { name: '头像', category: '展示', type: 'avatar', props: 'U', css: '.avatar { border-radius: 50%; }' },
-  { name: '导航项', category: '导航', type: 'nav-item', props: '菜单项', css: '.nav-item { padding: 10px 12px; }' },
-  { name: '面包屑', category: '导航', type: 'breadcrumb', props: '首页 > 项目 > 详情', css: '.breadcrumb { gap: 8px; }' },
-  { name: '提示框', category: '反馈', type: 'tooltip', props: '提示信息', css: '.tooltip { position: absolute; }' },
-  { name: '加载中', category: '反馈', type: 'spinner', props: '⏳ Loading...', css: '@keyframes spin { to { rotate: 360deg; } }' }
+// 默认组件数据（fallback）
+var DEFAULT_COMPONENTS = [
+  { name:'主按钮', category:'按钮', type:'primary', props:'Primary Button', css:'.btn-primary{background:#5B5EF4;color:#fff}' },
+  { name:'次要按钮', category:'按钮', type:'ghost', props:'Secondary Button', css:'.btn-ghost{border:1px solid #E8AEF}' },
+  { name:'危险按钮', category:'按钮', type:'danger', props:'Danger Button', css:'.btn-danger{background:#FF6B6B}' },
+  { name:'小按钮', category:'按钮', type:'sm', props:'Small Button', css:'.btn-sm{padding:4px 10px;font-size:12px}' },
+  { name:'输入框', category:'表单', type:'input', props:'Placeholder text', css:'.input{border:1px solid #E8AEF}' },
+  { name:'下拉选择', category:'表单', type:'select', props:'请选择', css:'select{appearance:none}' },
+  { name:'多行文本', category:'表单', type:'textarea', props:'请输入描述...', css:'textarea{resize:vertical}' },
+  { name:'复选框', category:'表单', type:'checkbox', props:'☑ 选项文本', css:'input[type=checkbox]{}' },
+  { name:'卡片', category:'容器', type:'card', props:'Card Container', css:'.card{border-radius:12px}' },
+  { name:'弹窗', category:'容器', type:'modal', props:'Modal Dialog', css:'.modal{max-width:480px}' },
+  { name:'标签', category:'展示', type:'badge', props:'New', css:'.badge{font-size:10px;padding:2px 6px}' },
+  { name:'头像', category:'展示', type:'avatar', props:'U', css:'.avatar{border-radius:50%}' },
+  { name:'导航项', category:'导航', type:'nav-item', props:'菜单项', css:'.nav-item{padding:10px 12px}' },
+  { name:'面包屑', category:'导航', type:'breadcrumb', props:'首页 > 项目 > 详情', css:'.breadcrumb{gap:8px}' },
+  { name:'提示框', category:'反馈', type:'tooltip', props:'提示信息', css:'.tooltip{position:absolute}' },
+  { name:'加载中', category:'反馈', type:'spinner', props:'⏳ Loading...', css:'@keyframes spin{to{rotate:360deg}}' }
 ];
 
-// Mock 字号规范数据
-var mockFontSizes = [
-  { name: '标题 1', tag: 'h1', size: '32px', lineHeight: '40px', weight: '600', usage: '页面主标题' },
-  { name: '标题 2', tag: 'h2', size: '24px', lineHeight: '32px', weight: '600', usage: '区块标题' },
-  { name: '标题 3', tag: 'h3', size: '18px', lineHeight: '26px', weight: '600', usage: '卡片标题' },
-  { name: '标题 4', tag: 'h4', size: '16px', lineHeight: '24px', weight: '600', usage: '段落标题' },
-  { name: '正文大', tag: 'p-lg', size: '15px', lineHeight: '22px', weight: '400', usage: '大段正文' },
-  { name: '正文', tag: 'p', size: '14px', lineHeight: '20px', weight: '400', usage: '常规正文' },
-  { name: '正文小', tag: 'p-sm', size: '13px', lineHeight: '18px', weight: '400', usage: '辅助文本' },
-  { name: '说明文字', tag: 'caption', size: '12px', lineHeight: '16px', weight: '400', usage: '说明/标注' },
-  { name: '微小文字', tag: 'tiny', size: '10px', lineHeight: '14px', weight: '400', usage: '角标/水印' }
+// 默认字号数据（fallback）
+var DEFAULT_SIZES = [
+  { name:'标题 1', tag:'h1', size:'32px', lineHeight:'40px', weight:'600', usage:'页面主标题' },
+  { name:'标题 2', tag:'h2', size:'24px', lineHeight:'32px', weight:'600', usage:'区块标题' },
+  { name:'标题 3', tag:'h3', size:'18px', lineHeight:'26px', weight:'600', usage:'卡片标题' },
+  { name:'标题 4', tag:'h4', size:'16px', lineHeight:'24px', weight:'600', usage:'段落标题' },
+  { name:'正文大', tag:'p-lg', size:'15px', lineHeight:'22px', weight:'400', usage:'大段正文' },
+  { name:'正文', tag:'p', size:'14px', lineHeight:'20px', weight:'400', usage:'常规正文' },
+  { name:'正文小', tag:'p-sm', size:'13px', lineHeight:'18px', weight:'400', usage:'辅助文本' },
+  { name:'说明文字', tag:'caption', size:'12px', lineHeight:'16px', weight:'400', usage:'说明/标注' },
+  { name:'微小文字', tag:'tiny', size:'10px', lineHeight:'14px', weight:'400', usage:'角标/水印' }
 ];
+
+// 获取当前DS的数据，fallback 到默认值
+function getDSIcons()   { return (currentDS && currentDS.icons && currentDS.icons.length > 0) ? currentDS.icons : FULL_ICON_POOL; }
+function getDSFonts()   { return (currentDS && currentDS.fonts && currentDS.fonts.length > 0) ? currentDS.fonts : DEFAULT_FONTS; }
+function getDSComponents() { return (currentDS && currentDS.components && currentDS.components.length > 0) ? currentDS.components : DEFAULT_COMPONENTS; }
+function getDSSizes()  { return (currentDS && currentDS.sizes && currentDS.sizes.length > 0) ? currentDS.sizes : DEFAULT_SIZES; }
 
 // 查找设计系统
 function findDesignSystemById(id) {
@@ -584,6 +726,7 @@ function renderDesignSystemDetail(dsId) {
   if (!mainContent) return;
 
   var ds = findDesignSystemById(dsId);
+  currentDS = ds;  // ★ 关键：记录当前查看的 DS，后续渲染函数从中取数据
   currentDSTab = 'icons';
   dsIconSearch = '';
   dsIconFilter = 'all';
@@ -603,8 +746,9 @@ function renderDetailHTML(ds) {
   var dsName = ds ? ds.name : '未知';
   var dsDesc = ds ? '组件库 ID: ' + ds.id + ' — 完整的设计系统定义，包含图标、字体、组件和字号规范' : '';
 
-  // 过滤图标
-  var filteredIcons = mockIcons.filter(function(icon) {
+  // 使用当前 DS 的图标数据（fallback 到默认池）
+  var dsIcons = getDSIcons();
+  var filteredIcons = dsIcons.filter(function(icon) {
     var matchSearch = !dsIconSearch ||
       icon.name.toLowerCase().indexOf(dsIconSearch.toLowerCase()) !== -1 ||
       icon.label.indexOf(dsIconSearch) !== -1;
@@ -687,7 +831,8 @@ function renderIconsTab(icons) {
 }
 
 function renderFontsTab() {
-  var listHTML = mockFonts.map(function(font) {
+  var fonts = getDSFonts();  // ★ 从当前 DS 取字体数据
+  var listHTML = fonts.map(function(font) {
     var weightTags = font.weights.map(function(w) {
       return '<span class="font-weight-tag">' + w + '</span>';
     }).join('');
@@ -703,12 +848,13 @@ function renderFontsTab() {
   }).join('');
 
   return '<section class="ds-section">' +
-    '<div class="ds-section-header"><h3>字体规范</h3><span class="ds-count">' + mockFonts.length + ' 款字体</span></div>' +
+    '<div class="ds-section-header"><h3>字体规范</h3><span class="ds-count">' + fonts.length + ' 款字体</span></div>' +
     '<div class="fonts-list">' + listHTML + '</div>' +
   '</section>';
 }
 
 function renderComponentsTab() {
+  var components = getDSComponents();  // ★ 从当前 DS 取组件数据
   function getPreviewStyle(type) {
     var styles = {
       primary:   'background:#5B5EF4;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;display:inline-block;',
@@ -726,12 +872,24 @@ function renderComponentsTab() {
       'nav-item':'padding:8px 12px;background:#f5f7fa;border-radius:6px;font-size:13px;color:#333;width:100%;box-sizing:border-box;display:block;',
       breadcrumb:'font-size:12px;color:#999;gap:4px;display:flex;',
       tooltip:  'background:#333;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;display:inline-block;',
-      spinner:  'width:20px;height:20px;border:2px solid #E8EAEF;border-top-color:#5B5EF4;border-radius:50%;display:inline-block;'
+      spinner:  'width:20px;height:20px;border:2px solid #E8EAEF;border-top-color:#5B5EF4;border-radius:50%;display:inline-block;',
+      'icon-btn':'width:32px;height:32px;border:1px solid #E8EAEF;border-radius:8px;display:flex;align-items:center;justify-content:center;',
+      toggle:   'width:40px;height:24px;border-radius:12px;background:#ccc;position:relative;',
+      drawer:   'background:#fff;border:1px solid #E8EAEF;border-radius:8px;padding:16px;width:280px;box-sizing:border-box;',
+      empty:    'text-align:center;padding:32px;color:#999;',
+      'progress-bar':'height:6px;border-radius:3px;background:#E8EAEF;position:relative;overflow:hidden;',
+      table:    'width:100%;border-collapse:collapse;border:1px solid #E8EAEF;',
+      tabs:     'display:flex;gap:0;border-bottom:2px solid #E8EAEF;',
+      steps:    'display:flex;gap:16px;',
+      timeline: 'border-left:2px solid #E8EAEF;padding-left:16px;',
+      'stat-card':'background:linear-gradient(135deg,#5B5EF4,#8B5CF6);color:#fff;padding:20px;border-radius:8px;',
+      'avatar-group':'display:flex;',
+      rating:   'letter-spacing:2px;'
     };
     return styles[type] || '';
   }
 
-  var gridHTML = mockComponents.map(function(comp) {
+  var gridHTML = components.map(function(comp) {
     var previewStyle = getPreviewStyle(comp.type);
     var previewTag = comp.type === 'checkbox'
       ? '<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" checked style="accent-color:#5B5EF4"/> 选项文本</label>'
@@ -739,7 +897,13 @@ function renderComponentsTab() {
         ? '<div style="' + previewStyle + '">U</div>'
         : comp.type === 'spinner'
           ? '<div style="' + previewStyle + '"></div>'
-          : '<span style="' + previewStyle + '">' + comp.props + '</span>';
+          : comp.type === 'toggle'
+            ? '<div style="' + previewStyle + '"><span style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:.2s"></span></div>'
+            : comp.type === 'progress-bar'
+              ? '<div style="' + previewStyle + '"><div style="width:70%;height:100%;background:#5B5EF4;border-radius:3px"></div></div>'
+              : comp.type === 'rating'
+                ? '<span style="' + previewStyle + '">★★★★☆</span>'
+                : '<span style="' + previewStyle + '">' + comp.props + '</span>';
 
     return '<div class="component-card">' +
       '<div class="comp-header"><h4>' + comp.name + '</h4><span class="comp-category">' + comp.category + '</span></div>' +
@@ -749,13 +913,14 @@ function renderComponentsTab() {
   }).join('');
 
   return '<section class="ds-section">' +
-    '<div class="ds-section-header"><h3>组件</h3><span class="ds-count">' + mockComponents.length + ' 个组件</span></div>' +
+    '<div class="ds-section-header"><h3>组件</h3><span class="ds-count">' + components.length + ' 个组件</span></div>' +
     '<div class="components-grid">' + gridHTML + '</div>' +
   '</section>';
 }
 
 function renderSizesTab() {
-  var rowsHTML = mockFontSizes.map(function(fs) {
+  var sizes = getDSSizes();  // ★ 从当前 DS 取字号数据
+  var rowsHTML = sizes.map(function(fs) {
     return '<tr>' +
       '<td><div class="size-preview" style="font-size:' + fs.size + ';line-height:' + fs.lineHeight + ';font-weight:' + fs.weight + '">' + fs.name + '</div></td>' +
       '<td><code>' + fs.tag + '</code></td>' +
@@ -767,7 +932,7 @@ function renderSizesTab() {
   }).join('');
 
   return '<section class="ds-section">' +
-    '<div class="ds-section-header"><h3>字号规范</h3><span class="ds-count">' + mockFontSizes.length + ' 个字号</span></div>' +
+    '<div class="ds-section-header"><h3>字号规范</h3><span class="ds-count">' + sizes.length + ' 个字号</span></div>' +
     '<div class="sizes-table-wrapper"><table class="sizes-table">' +
       '<thead><tr><th style="width:30%">预览</th><th>标签</th><th>字号</th><th>行高</th><th>字重</th><th>用途</th></tr></thead>' +
       '<tbody>' + rowsHTML + '</tbody>' +
@@ -778,18 +943,17 @@ function renderSizesTab() {
 function bindDetailEvents() {
   // 返回按钮
   var backBtn = document.querySelector('.ds-back-btn');
-  if (backBtn) backBtn.onclick = function(e) { e.preventDefault(); navigateTo('library'); };
+  if (backBtn) backBtn.onclick = function(e) { e.preventDefault(); currentDS = null; navigateTo('library'); };
 
   // Tab 切换
   document.querySelectorAll('.ds-tab').forEach(function(tab) {
     tab.onclick = function() {
       currentDSTab = this.getAttribute('data-dstab');
-      var dsId = window.location.pathname.split('/')[2];
-      var ds = findDesignSystemById(dsId);
       var contentEl = document.getElementById('ds-content-area');
       if (contentEl) {
         if (currentDSTab === 'icons') {
-          var filtered = mockIcons.filter(function(ic) {
+          var icons = getDSIcons();
+          var filtered = icons.filter(function(ic) {
             var ms = !dsIconSearch || ic.name.toLowerCase().indexOf(dsIconSearch.toLowerCase()) !== -1 || ic.label.indexOf(dsIconSearch) !== -1;
             var mf = dsIconFilter === 'all' || ic.type === dsIconFilter;
             return ms && mf;
@@ -833,7 +997,8 @@ function bindDetailEvents() {
 }
 
 function refreshIconsTab() {
-  var filtered = mockIcons.filter(function(ic) {
+  var icons = getDSIcons();  // ★ 用当前 DS 的图标
+  var filtered = icons.filter(function(ic) {
     var ms = !dsIconSearch || ic.name.toLowerCase().indexOf(dsIconSearch.toLowerCase()) !== -1 || ic.label.indexOf(dsIconSearch) !== -1;
     var mf = dsIconFilter === 'all' || ic.type === dsIconFilter;
     return ms && mf;

@@ -2926,7 +2926,10 @@ button {
 /* ========================================
    Design System Detail Page - 4 Tabs
    ======================================== */
-.ds-detail { max-width: 1400px; }
+.ds-detail {
+  max-width: 1400px;
+  width: 100%;
+}
 
 .ds-header {
   display: flex;

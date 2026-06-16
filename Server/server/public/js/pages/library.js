@@ -37,7 +37,7 @@ function saveDesignSystems(list) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
 }
 
-var designSystems = loadDesignSystems();
+var designSystems; // 初始化延迟到模板数据定义之后
 
 // 解析阶段配置
 var parseStages = [
@@ -700,6 +700,9 @@ function getDSIcons()   { return (currentDS && currentDS.icons && currentDS.icon
 function getDSFonts()   { return (currentDS && currentDS.fonts && currentDS.fonts.length > 0) ? currentDS.fonts : DEFAULT_FONTS; }
 function getDSComponents() { return (currentDS && currentDS.components && currentDS.components.length > 0) ? currentDS.components : DEFAULT_COMPONENTS; }
 function getDSSizes()  { return (currentDS && currentDS.sizes && currentDS.sizes.length > 0) ? currentDS.sizes : DEFAULT_SIZES; }
+
+// ===== 初始化设计系统（必须在所有模板数据定义之后）=====
+designSystems = loadDesignSystems();
 
 // 查找设计系统
 function findDesignSystemById(id) {

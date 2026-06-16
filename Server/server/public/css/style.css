@@ -32,7 +32,7 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -343,6 +343,7 @@ button {
 .layout {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   margin-top: var(--header-h);
 }

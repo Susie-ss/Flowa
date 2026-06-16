@@ -1,37 +1,31 @@
 // pages/library.js - 组件库（设计系统）页面
 
-// ===== Mock 数据 =====
-var mockDesignSystems = [
-  {
-    id: '1',
-    name: '企业后台设计系统',
-    description: '包含按钮、表单、表格等基础组件',
-    componentCount: 48,
-    colorCount: 12,
-    createdAt: '2024-01-15',
-    colors: ['#5B5EF4', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6']
-  },
-  {
-    id: '2',
-    name: '移动端组件库',
-    description: '适用于移动端 App 的组件设计',
-    componentCount: 32,
-    colorCount: 8,
-    createdAt: '2024-02-20',
-    colors: ['#3B82F6', '#10B981', '#F59E0B', '#EC4899']
-  },
-  {
-    id: '3',
-    name: '营销页面组件',
-    description: '落地页、活动页常用组件',
-    componentCount: 24,
-    colorCount: 6,
-    createdAt: '2024-03-10',
-    colors: ['#8B5CF6', '#06B6D4', '#F97316', '#14B8A6']
-  }
-];
+// ===== localStorage 持久化 =====
+var LS_KEY = 'framo_design_systems';
 
-var designSystems = mockDesignSystems.slice();
+function loadDesignSystems() {
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) { /* ignore */ }
+  // 首次加载：返回默认 Mock 数据并保存
+  var defaultDS = [
+    { id:'1', name:'企业后台设计系统', description:'包含按钮、表单、表格等基础组件', componentCount:48, colorCount:12, createdAt:'2024-01-15', colors:['#5B5EF4','#22C55E','#F59E0B','#EF4444','#8B5CF6'] },
+    { id:'2', name:'移动端组件库', description:'适用于移动端 App 的组件设计', componentCount:32, colorCount:8, createdAt:'2024-02-20', colors:['#3B82F6','#10B981','#F59E0B','#EC4899'] },
+    { id:'3', name:'营销页面组件', description:'落地页、活动页常用组件', componentCount:24, colorCount:6, createdAt:'2024-03-10', colors:['#8B5CF6','#06B6D4','#F97316','#14B8A6'] }
+  ];
+  saveDesignSystems(defaultDS);
+  return defaultDS;
+}
+
+function saveDesignSystems(list) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+}
+
+var designSystems = loadDesignSystems();
 
 // 解析阶段配置
 var parseStages = [
@@ -414,6 +408,9 @@ window.confirmCreateLibrary = function() {
 
   // 添加到列表头部
   designSystems.unshift(newDS);
+
+  // 持久化到 localStorage
+  saveDesignSystems(designSystems);
 
   // 关闭弹窗
   var modal = document.getElementById('new-library-modal');
@@ -869,3 +866,4 @@ window.renderLibraryPage = (function(origRender) {
 // 导出详情渲染函数
 window.renderDesignSystemDetail = renderDesignSystemDetail;
 window.findDesignSystemById = findDesignSystemById;
+window.designSystems = designSystems; // 供 AI 生成页面读取设计系统列表

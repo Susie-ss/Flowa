@@ -527,6 +527,7 @@ button {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  min-height: 0;         /* 关键：允许 flex 子元素缩小，触发 overflow 滚动 */
 }
 
 /* ===== Auth Pages ===== */

@@ -29,8 +29,8 @@ function renderAIGeneratePage() {
           '<div class="ai-gen-msg ai-gen-msg-bot">' +
             '<div class="ai-gen-msg-avatar"><svg viewBox="0 0 24 24" fill="#5B5EF4" width="16" height="16"><path d="M12 3l1.5 3.5L17 8l-3.5 1.5L12 13l-1.5-3.5L7 8l3.5-1.5L12 3z"/><circle cx="18" cy="18" r="3"/><path d="M18 16v4M16 18h4"/></svg></div>' +
             '<div class="ai-gen-msg-content">' +
-              '<p>你好！描述你想要的页面，我会自动生成原型界面。</p>' +
-              '<p style="font-size:12px;color:var(--text-muted);margin-top:8px">例如：一个包含统计卡片和折线图的数据看板，侧边栏有导航菜单</p>' +
+              '<p>你好！先在上方选择要使用的设计系统风格，然后描述你想要的页面。</p>' +
+              '<p style="font-size:12px;color:var(--text-muted);margin-top:8px">选择组件库后，生成的界面将使用该组件库的颜色、字体和组件规范。例如：一个包含统计卡片和折线图的数据看板，侧边栏有导航菜单</p>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -198,7 +198,7 @@ function generateAIResponse(prompt, dsId, dsName) {
   };
 }
 
-// ===== 生成预览 HTML =====
+// ===== 生成预览 HTML（基于真实设计系统数据）=====
 function generatePreviewHTML(prompt, dsId) {
   var ds = null;
   if (dsId) {
@@ -208,13 +208,35 @@ function generatePreviewHTML(prompt, dsId) {
     }
   }
 
+  // ═══ 从设计系统提取真实数据 ═══
   var primaryColor = ds && ds.colors && ds.colors.length > 0 ? ds.colors[0] : '#5B5EF4';
   var secondaryColor = ds && ds.colors && ds.colors.length > 1 ? ds.colors[1] : '#22C55E';
   var accentColor = ds && ds.colors && ds.colors.length > 2 ? ds.colors[2] : '#F59E0B';
+  var colors = ds && ds.colors && ds.colors.length > 3 ? ds.colors : [primaryColor, secondaryColor, accentColor, '#EF4444'];
 
-  var fontFamily = 'system-ui, -apple-system, sans-serif';
+  // 从 DS 获取真实字体
+  var dsFonts = (ds && ds.fonts) || [];
+  var fontFamily = dsFonts.length > 0 ? "'" + dsFonts[0].name + "', " + (dsFonts[0].family || 'sans-serif') : 'system-ui, -apple-system, sans-serif';
+
+  // 从 DS 获取真实图标名（用于侧边栏）
+  var dsIcons = (ds && ds.icons) || [];
+  var navIconNames = dsIcons.slice(0, 4).map(function(ic) { return ic.label || ic.name; });
+  while (navIconNames.length < 4) {
+    var defaults = ['概览', '项目', '成员', '设置'];
+    navIconNames.push(defaults[navIconNames.length]);
+  }
+
+  // 从 DS 获取真实组件名
+  var dsComponents = (ds && ds.components) || [];
+  var compNames = dsComponents.slice(0, 3).map(function(c) { return c.name; });
+  while (compNames.length < 3) {
+    var defaultComps = ['主按钮', '次要按钮', '输入框'];
+    compNames.push(defaultComps[compNames.length]);
+  }
+
   var sidebarWidth = 220;
 
+  // 关键词检测（基于用户输入）
   var hasNav = prompt.indexOf('导航') >= 0 || prompt.indexOf('侧边栏') >= 0 || prompt.indexOf('菜单') >= 0;
   var hasChart = prompt.indexOf('图表') >= 0 || prompt.indexOf('折线') >= 0 || prompt.indexOf('趋势') >= 0 || prompt.indexOf('统计') >= 0;
   var hasTable = prompt.indexOf('表格') >= 0 || prompt.indexOf('数据') >= 0;
@@ -230,11 +252,11 @@ function generatePreviewHTML(prompt, dsId) {
   }
 
   var html = '<!DOCTYPE html><html><head><style>';
-  html += '*{margin:0;padding:0;box-sizing:border-box;font-family:' + fontFamily + '}';
-  html += 'body{background:#f5f5f7;min-height:100vh}';
+  html += '*{margin:0;padding:0;box-sizing:border-box}';
+  html += 'body{background:#f5f5f7;min-height:100vh;font-family:' + fontFamily + '}';
   html += '.app{display:flex;min-height:100vh}';
 
-  // 侧边栏
+  // 侧边栏（使用 DS 颜色 + 图标名）
   if (hasNav) {
     html += '.sidebar{width:' + sidebarWidth + 'px;background:' + primaryColor + ';color:#fff;padding:20px 0;display:flex;flex-direction:column}';
     html += '.sidebar-logo{padding:0 16px 24px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}';
@@ -302,67 +324,47 @@ function generatePreviewHTML(prompt, dsId) {
     html += '.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}';
   }
 
-  // 列表
-  if (hasList) {
-    html += '.list-section{background:#fff;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}';
-    html += '.list-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f7}';
-    html += '.list-item:last-child{border-bottom:none}';
-    html += '.list-avatar{width:32px;height:32px;border-radius:8px;background:' + primaryColor + '15;display:flex;align-items:center;justify-content:center;color:' + primaryColor + ';font-size:14px;font-weight:600}';
-    html += '.list-info{flex:1}';
-    html += '.list-title{font-size:13px;font-weight:500;color:#1a1a2e}';
-    html += '.list-desc{font-size:11px;color:#8e8ea0;margin-top:2px}';
-  }
-
   html += '</style></head><body>';
-
-  // ===== HTML body =====
   html += '<div class="app">';
 
-  // 侧边栏
+  // ═══ 侧边栏（使用 DS 真实图标名 ═══
   if (hasNav) {
-    var navItems = [
-      { label: '概览', icon: '📊', active: true },
-      { label: '项目', icon: '📁' },
-      { label: '成员', icon: '👥' },
-      { label: '设置', icon: '⚙️' }
-    ];
     html += '<div class="sidebar">';
-    html += '<div class="sidebar-logo"><span style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px">◆</span> ProtoApp</div>';
-    navItems.forEach(function(item) {
-      html += '<div class="sidebar-item' + (item.active ? ' active' : '') + '"><span>' + item.icon + '</span><span>' + item.label + '</span></div>';
-    });
+    html += '<div class="sidebar-logo"><span style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px">◆</span>' + (ds ? ds.name : 'Flowa') + '</div>';
+    html += '<div class="sidebar-item active"><span>📊</span><span>' + navIconNames[0] + '</span></div>';
+    html += '<div class="sidebar-item"><span>📁</span><span>' + navIconNames[1] + '</span></div>';
+    html += '<div class="sidebar-item"><span>👥</span><span>' + navIconNames[2] + '</span></div>';
+    html += '<div class="sidebar-item"><span>⚙️</span><span>' + navIconNames[3] + '</span></div>';
     html += '<div class="sidebar-spacer"></div>';
-    html += '<div class="sidebar-bottom">admin@example.com</div>';
+    html += '<div class="sidebar-bottom">' + (ds ? ds.name : 'Flowa') + ' Design</div>';
     html += '</div>';
   }
 
   html += '<div class="main" id="ai-gen-preview-main">';
 
-  // 页面头部
+  // 页面头部（使用 DS 组件名）
   html += '<div class="page-header" id="page-header">';
-  html += '<h2>概览</h2>';
+  html += '<h2>' + (prompt.length > 20 ? prompt.slice(0, 20) + '...' : prompt) + '</h2>';
   html += '<div class="page-header-actions">';
-  html += '<button class="btn btn-secondary">导出</button>';
-  html += '<button class="btn btn-primary">新建</button>';
+  html += '<button class="btn btn-secondary">' + (compNames[1] || '次要') + '</button>';
+  html += '<button class="btn btn-primary">' + (compNames[0] || '主按钮') + '</button>';
   html += '</div></div>';
 
-  // 统计卡片
+  // 统计卡片（使用 DS 颜色）
   if (hasCard) {
-    var stats = [
-      { label: '总用户', value: '12,846', change: '+12.5%', up: true, icon: '👤' },
-      { label: '活跃项目', value: '342', change: '+8.2%', up: true, icon: '📁' },
-      { label: '营收', value: '¥86,240', change: '+23.1%', up: true, icon: '💰' },
-      { label: '转化率', value: '3.24%', change: '-1.2%', up: false, icon: '📈' }
-    ];
+    var statsLabels = ['总用户', '活跃项目', '营收', '转化率'];
+    if (dsFonts.length > 0) statsLabels[0] = dsFonts[0].name + ' 用户';
+    if (dsComponents.length > 0) statsLabels[1] = dsComponents[0].category + ' 数';
     html += '<div class="stats">';
-    stats.forEach(function(s) {
+    for (var si = 0; si < 4; si++) {
+      var statColor = colors[si % colors.length];
       html += '<div class="stat-card">';
-      html += '<div class="stat-card-icon" style="background:' + primaryColor + '15;color:' + primaryColor + '">' + s.icon + '</div>';
-      html += '<div class="stat-card-label">' + s.label + '</div>';
-      html += '<div class="stat-card-value">' + s.value + '</div>';
-      html += '<div class="stat-card-change ' + (s.up ? 'up' : 'down') + '">' + s.change + '</div>';
+      html += '<div class="stat-card-icon" style="background:' + statColor + '15;color:' + statColor + '">' + ['👤','📁','💰','📈'][si] + '</div>';
+      html += '<div class="stat-card-label">' + statsLabels[si] + '</div>';
+      html += '<div class="stat-card-value">' + ['12,846','342','¥86,240','3.24%'][si] + '</div>';
+      html += '<div class="stat-card-change ' + (si < 3 ? 'up' : 'down') + '">' + ['+12.5%','+8.2%','+23.1%','-1.2%'][si] + '</div>';
       html += '</div>';
-    });
+    }
     html += '</div>';
   }
 
@@ -372,22 +374,22 @@ function generatePreviewHTML(prompt, dsId) {
     html += '<h3>月度趋势</h3>';
     html += '<div class="chart-placeholder">';
     html += '<div class="chart-line"><svg viewBox="0 0 300 150"><path d="M0,120 Q37.5,90 75,100 T150,70 T225,50 T300,30" fill="none" stroke="' + primaryColor + '" stroke-width="2.5"/><path d="M0,120 Q37.5,105 75,110 T150,90 T225,75 T300,60" fill="none" stroke="' + secondaryColor + '" stroke-width="2" stroke-dasharray="4,4" opacity=".6"/></svg></div>';
-    html += '<span style="color:#8e8ea0;font-size:12px">📈 趋势数据可视化</span>';
+    html += '<span style="color:#8e8ea0;font-size:12px">📈 ' + (ds ? ds.name + ' 趋势' : '趋势数据') + '</span>';
     html += '</div></div>';
   }
 
   // 表格
   if (hasTable) {
     html += '<div class="table-section" id="数据表格">';
-    html += '<h3>项目列表</h3>';
+    html += '<h3>' + (ds ? ds.name : '项目') + '列表</h3>';
     html += '<table><thead><tr><th>名称</th><th>负责人</th><th>状态</th><th>进度</th></tr></thead><tbody>';
-    var rows = [
-      { name: '官网改版', owner: '张三', status: '进行中', progress: 65, online: true },
-      { name: '后台管理系统', owner: '李四', status: '已完成', progress: 100, online: true },
-      { name: '移动端优化', owner: '王五', status: '暂停', progress: 30, online: false },
-      { name: '数据分析平台', owner: '赵六', status: '进行中', progress: 45, online: true }
+    var tableRows = [
+      { name: compNames[0] || '主按钮', owner: '张设计', status: '进行中', progress: 65, online: true },
+      { name: compNames[1] || '输入框', owner: '李开发', status: '已完成', progress: 100, online: true },
+      { name: compNames[2] || '导航栏', owner: '王产品', status: '暂停', progress: 30, online: false },
+      { name: (dsComponents[3] && dsComponents[3].name) || '数据表格', owner: '赵测试', status: '进行中', progress: 45, online: true }
     ];
-    rows.forEach(function(r) {
+    tableRows.forEach(function(r) {
       html += '<tr><td>' + r.name + '</td><td>' + r.owner + '</td><td class="status"><span class="status-dot ' + (r.online ? 'online' : 'offline') + '"></span>' + r.status + '</td><td><span class="tag">' + r.progress + '%</span></td></tr>';
     });
     html += '</tbody></table></div>';
@@ -396,20 +398,40 @@ function generatePreviewHTML(prompt, dsId) {
   // 表单
   if (hasForm) {
     html += '<div class="form-section" id="表单">';
-    html += '<h3>新建项目</h3>';
-    html += '<div class="form-group"><label>项目名称</label><input type="text" placeholder="请输入项目名称" value="AI 原型生成"></div>';
-    html += '<div class="form-group"><label>邮箱</label><input type="email" placeholder="请输入邮箱" value="team@example.com"></div>';
-    html += '<div class="form-actions"><button class="btn btn-secondary">取消</button><button class="btn btn-primary">提交</button></div>';
+    html += '<h3>' + (compNames[0] || '新建') + '</h3>';
+    html += '<div class="form-group"><label>' + (dsFonts.length > 0 ? dsFonts[0].name : '项目名称') + '</label><input type="text" placeholder="请输入" value="' + (ds ? ds.name : 'Flowa') + '"></div>';
+    html += '<div class="form-group"><label>邮箱</label><input type="email" placeholder="请输入邮箱" value="team@' + (ds ? ds.name.replace(/[\s]/g, '').toLowerCase() : 'flowa') + '.com"></div>';
+    html += '<div class="form-actions"><button class="btn btn-secondary">' + (compNames[1] || '取消') + '</button><button class="btn btn-primary">' + (compNames[0] || '提交') + '</button></div>';
     html += '</div>';
   }
 
-  // 列表
-  if (hasList) {
-    html += '<div class="list-section">';
-    html += '<div class="list-item"><div class="list-avatar">A</div><div class="list-info"><div class="list-title">项目 Alpha</div><div class="list-desc">最后更新 2 小时前</div></div><span class="tag">进行中</span></div>';
-    html += '<div class="list-item"><div class="list-avatar">B</div><div class="list-info"><div class="list-title">项目 Beta</div><div class="list-desc">最后更新 1 天前</div></div><span class="tag">已完成</span></div>';
-    html += '<div class="list-item"><div class="list-avatar">C</div><div class="list-info"><div class="list-title">项目 Gamma</div><div class="list-desc">最后更新 3 天前</div></div><span class="tag">暂停</span></div>';
-    html += '</div>';
+  // 组件展示区（展示 DS 中的真实组件预览）
+  if (dsComponents.length > 0) {
+    html += '<div class="chart-section" id="组件预览">';
+    html += '<h3>组件库样式预览</h3>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    var maxShow = Math.min(6, dsComponents.length);
+    for (var ci = 0; ci < maxShow; ci++) {
+      var cName = dsComponents[ci].name;
+      var cColor = colors[ci % colors.length];
+      html += '<span style="padding:4px 12px;background:' + cColor + '22;color:' + cColor + ';border-radius:4px;font-size:12px;font-weight:500;border:1px solid ' + cColor + '33">' + cName + '</span>';
+    }
+    if (dsComponents.length > 6) {
+      html += '<span style="padding:4px 12px;background:#f0f0f0;border-radius:4px;font-size:12px;color:#999">+' + (dsComponents.length - 6) + ' 更多</span>';
+    }
+    html += '</div></div>';
+  }
+
+  // 字体展示区
+  if (dsFonts.length > 0) {
+    html += '<div class="chart-section">';
+    html += '<h3>字体规范</h3>';
+    html += '<div style="display:flex;gap:16px;flex-wrap:wrap">';
+    dsFonts.forEach(function(f) {
+      var fallback = f.family || 'sans-serif';
+      html += '<div style="padding:12px 16px;background:#f9fafb;border-radius:8px"><div style="font-family:\'' + f.name + '\', ' + fallback + ';font-size:16px;font-weight:500;margin-bottom:4px">' + f.name + '</div><div style="font-size:11px;color:#999">' + (f.sample || '字体示例') + ' · ' + (f.category || 'sans-serif') + '</div></div>';
+    });
+    html += '</div></div>';
   }
 
   html += '</div></div></body></html>';

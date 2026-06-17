@@ -427,7 +427,7 @@ function showDownloadPluginModal() {
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">' +
       '<div style="display:flex;align-items:center;gap:12px">' +
         '<div style="width:44px;height:44px;background:linear-gradient(135deg,#5B5EF4,#8B8EFF);border-radius:10px;display:flex;align-items:center;justify-content:center"><svg class="icon-color" style="font-size:22px"><use href="/libs/iconpark/icons.svg#ico-file"/></svg></div>' +
-        '<div><div style="font-size:16px;font-weight:600">Framo插件</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">一键发布原型到平台，实现在线预览</div></div>' +
+        '<div><div style="font-size:16px;font-weight:600">Flowa插件</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">一键发布原型到平台，实现在线预览</div></div>' +
       '</div>' +
       '<button class="modal-close-btn" onclick="document.getElementById(\'plugin-modal\').remove()"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#close"/></svg></button>' +
     '</div>' +

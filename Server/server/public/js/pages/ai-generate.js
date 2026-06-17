@@ -198,7 +198,241 @@ function generateAIResponse(prompt, dsId, dsName) {
   };
 }
 
-// ===== 生成预览 HTML（基于真实设计系统数据）=====
+// ===== AI 语义分析引擎 ====
+// 基于关键词和语义模板，从用户描述中提取页面主题、模块和内容
+
+// 主题模板库
+var AI_THEMES = {
+  // 数据看板/仪表盘
+  dashboard: {
+    keywords: ['看板','dashboard','总览','概览','数据','统计','指标','监控','大屏','分析','报表','汇报'],
+    title: function(topic) { return topic + ' 数据看板'; },
+    pageTitle: function(topic) { return topic + '总览'; },
+    navItems: function(topic) { return ['总览','分析','报表','设置']; },
+    stats: function(topic) {
+      return [
+        { label: topic + '总数', value: '12,846', change: '+12.5%', up: true, icon: '📊' },
+        { label: '活跃' + topic, value: '342', change: '+8.2%', up: true, icon: '📈' },
+        { label: topic + '增长', value: '¥86,240', change: '+23.1%', up: true, icon: '💰' },
+        { label: '转化率', value: '3.24%', change: '-1.2%', up: false, icon: '📉' }
+      ];
+    },
+    tableHeaders: ['项目','负责人','状态','进度'],
+    tableRows: function(topic, comps) {
+      return [
+        { name: comps[0] || topic + '模块A', owner: '张工', status: '进行中', pct: 65, online: true },
+        { name: comps[1] || topic + '模块B', owner: '李工', status: '已完成', pct: 100, online: true },
+        { name: comps[2] || topic + '模块C', owner: '王工', status: '暂停', pct: 30, online: false },
+        { name: topic + '优化', owner: '赵工', status: '进行中', pct: 45, online: true }
+      ];
+    },
+    chartTitle: function(topic) { return topic + '月度趋势'; },
+    chartLabel: function(topic) { return topic + '趋势数据'; }
+  },
+  // 官网/落地页
+  landing: {
+    keywords: ['官网','首页','landing','落地页','推广','营销','品牌','宣传','介绍'],
+    title: function(topic) { return topic + ' - 官方网站'; },
+    pageTitle: function(topic) { return '欢迎来到 ' + topic; },
+    navItems: function(topic) { return ['首页','产品','关于','联系']; },
+    stats: function(topic) {
+      return [
+        { label: '活跃用户', value: '52,846', change: '+18.5%', up: true, icon: '👤' },
+        { label: '页面访问', value: '128K', change: '+32%', up: true, icon: '👁️' },
+        { label: '注册转化', value: '8.6%', change: '+5.2%', up: true, icon: '📝' },
+        { label: '平均停留', value: '4m32s', change: '+12%', up: true, icon: '⏱️' }
+      ];
+    },
+    tableHeaders: ['产品','价格','状态','评分'],
+    tableRows: function(topic, comps) {
+      return [
+        { name: comps[0] || '基础版', owner: '¥9.9', status: '热销', pct: 100, online: true },
+        { name: comps[1] || '专业版', owner: '¥29.9', status: '推荐', pct: 100, online: true },
+        { name: comps[2] || '企业版', owner: '¥99.9', status: '定制', pct: 100, online: false },
+        { name: '旗舰版', owner: '¥199.9', status: '限量', pct: 100, online: true }
+      ];
+    },
+    chartTitle: function(topic) { return topic + '访问趋势'; },
+    chartLabel: function(topic) { return topic + '流量数据'; }
+  },
+  // 电商/商城
+  ecommerce: {
+    keywords: ['电商','商城','商品','购物','订单','支付','交易','店铺','零售','购买'],
+    title: function(topic) { return topic + '管理平台'; },
+    pageTitle: function(topic) { return topic + '运营中心'; },
+    navItems: function(topic) { return ['运营','商品','订单','数据']; },
+    stats: function(topic) {
+      return [
+        { label: '今日订单', value: '1,284', change: '+15.3%', up: true, icon: '🛒' },
+        { label: '商品数', value: '3,452', change: '+8.7%', up: true, icon: '📦' },
+        { label: '营业额', value: '¥68,240', change: '+22.1%', up: true, icon: '💰' },
+        { label: '退款率', value: '2.1%', change: '-0.3%', up: false, icon: '↩️' }
+      ];
+    },
+    tableHeaders: ['商品','价格','销量','状态'],
+    tableRows: function(topic, comps) {
+      return [
+        { name: comps[0] || '热门商品A', owner: '¥128', status: '在售', pct: 85, online: true },
+        { name: comps[1] || '热门商品B', owner: '¥79', status: '促销', pct: 92, online: true },
+        { name: comps[2] || '新品推荐', owner: '¥199', status: '预售', pct: 100, online: false },
+        { name: '经典款', owner: '¥59', status: '在售', pct: 78, online: true }
+      ];
+    },
+    chartTitle: function(topic) { return topic + '销售趋势'; },
+    chartLabel: function(topic) { return topic + '销售额'; }
+  },
+  // 后台管理
+  admin: {
+    keywords: ['后台','管理','admin','系统','控制台','运维','配置','权限','用户管理'],
+    title: function(topic) { return topic + '管理系统'; },
+    pageTitle: function(topic) { return topic + '控制台'; },
+    navItems: function(topic) { return ['控制台','用户','日志','设置']; },
+    stats: function(topic) {
+      return [
+        { label: '注册用户', value: '8,246', change: '+6.5%', up: true, icon: '👥' },
+        { label: '在线用户', value: '186', change: '+12%', up: true, icon: '🟢' },
+        { label: 'API调用', value: '142万', change: '+45%', up: true, icon: '🔗' },
+        { label: '异常率', value: '0.02%', change: '-80%', up: false, icon: '⚠️' }
+      ];
+    },
+    tableHeaders: ['用户','角色','状态','最后登录'],
+    tableRows: function(topic, comps) {
+      return [
+        { name: 'admin', owner: '超级管理员', status: '在线', pct: 100, online: true },
+        { name: comps[0] || '运营', owner: '运营专员', status: '在线', pct: 100, online: true },
+        { name: comps[1] || '开发', owner: '开发工程师', status: '离线', pct: 100, online: false },
+        { name: comps[2] || '测试', owner: '测试工程师', status: '在线', pct: 100, online: true }
+      ];
+    },
+    chartTitle: function(topic) { return topic + '系统负载'; },
+    chartLabel: function(topic) { return topic + '运行状态'; }
+  },
+  // 项目/团队协作
+  project: {
+    keywords: ['项目','团队','协作','任务','进度','sprint','迭代','需求','开发','研发','产品'],
+    title: function(topic) { return topic + '管理看板'; },
+    pageTitle: function(topic) { return topic + '看板'; },
+    navItems: function(topic) { return ['概览','任务','文档','成员']; },
+    stats: function(topic) {
+      return [
+        { label: '进行中', value: '23', change: '+3', up: true, icon: '🔄' },
+        { label: '已完成', value: '156', change: '+12', up: true, icon: '✅' },
+        { label: '待评审', value: '8', change: '-2', up: false, icon: '📋' },
+        { label: '延期任务', value: '3', change: '-5', up: false, icon: '⚠️' }
+      ];
+    },
+    tableHeaders: ['任务','负责人','优先级','截止'],
+    tableRows: function(topic, comps) {
+      return [
+        { name: comps[0] || '需求评审', owner: '张产品', status: '高', pct: 60, online: true },
+        { name: comps[1] || 'UI设计', owner: '李设计', status: '中', pct: 100, online: true },
+        { name: comps[2] || '后端开发', owner: '王开发', status: '高', pct: 30, online: false },
+        { name: '联调测试', owner: '赵测试', status: '低', pct: 45, online: true }
+      ];
+    },
+    chartTitle: function(topic) { return topic + '燃尽图'; },
+    chartLabel: function(topic) { return topic + '进度'; }
+  },
+  // 教育/学习
+  education: {
+    keywords: ['教育','学习','课程','学生','教学','培训','课堂','考试','成绩','学校','在线教育'],
+    title: function(topic) { return topic + '教学平台'; },
+    pageTitle: function(topic) { return topic + '学习中心'; },
+    navItems: function(topic) { return ['课程','学习','考试','成绩']; },
+    stats: function(topic) {
+      return [
+        { label: '在学人数', value: '3,246', change: '+18%', up: true, icon: '🎓' },
+        { label: '课程数', value: '128', change: '+6', up: true, icon: '📚' },
+        { label: '完成率', value: '76%', change: '+8%', up: true, icon: '🏆' },
+        { label: '平均分', value: '86.5', change: '+3.2', up: true, icon: '⭐' }
+      ];
+    },
+    tableHeaders: ['课程','讲师','时长','评分'],
+    tableRows: function(topic, comps) {
+      return [
+        { name: comps[0] || '基础入门', owner: '张老师', status: '进行中', pct: 65, online: true },
+        { name: comps[1] || '进阶实战', owner: '李老师', status: '已完结', pct: 100, online: true },
+        { name: comps[2] || '专题训练', owner: '王老师', status: '筹备中', pct: 100, online: false },
+        { name: '考试冲刺', owner: '赵老师', status: '进行中', pct: 45, online: true }
+      ];
+    },
+    chartTitle: function(topic) { return topic + '学习趋势'; },
+    chartLabel: function(topic) { return topic + '学习数据'; }
+  }
+};
+
+// AI 语义分析：从用户描述中提取主题和关键词
+function analyzePrompt(prompt) {
+  var result = {
+    theme: 'dashboard',
+    topic: '',
+    sections: [],
+    hasNav: false,
+    hasChart: false,
+    hasTable: false,
+    hasForm: false,
+    hasCard: false
+  };
+
+  // 提取主题话题（核心名词）
+  var sentence = prompt.replace(/[，。！？、：；""''（）\(\)\[\]]/g, ' ').trim();
+  var words = sentence.split(/\s+/).filter(function(w) { return w.length > 0; });
+
+  // 找到最长/最核心的名词作为主题
+  var skipWords = ['一个','这个','那个','一些','什么','怎么','如何','帮我','给我','我要','我想','请','生成','制作','创建','设计','画','做'];
+  var topicWords = words.filter(function(w) {
+    return w.length >= 2 && skipWords.indexOf(w) < 0 && w !== '的' && w !== '了' && w !== '和' && w !== '与' && w !== '有';
+  });
+  // 取第二个词作为核心主题（第一个词通常是动词）
+  result.topic = topicWords[1] || topicWords[0] || '';
+
+  // 匹配主题模板
+  var maxScore = 0;
+  for (var t in AI_THEMES) {
+    var score = 0;
+    AI_THEMES[t].keywords.forEach(function(kw) {
+      if (prompt.indexOf(kw) >= 0) score += 2;
+      // 也检查拼音近义词
+      if (kw.length >= 2 && prompt.indexOf(kw.slice(0, 2)) >= 0) score += 1;
+    });
+    if (score > maxScore) { maxScore = score; result.theme = t; }
+  }
+
+  // 部分匹配也要考虑
+  if (maxScore === 0) {
+    // 没有匹配到任何主题时，从内容推断
+    if (topicWords.length > 0) result.theme = 'dashboard';
+  }
+
+  // 检测模块
+  var p = prompt;
+  result.hasNav = /导航|侧边栏|菜单|sidebar|nav/i.test(p);
+  result.hasChart = /图表|折线|趋势|统计|图|chart|graph/i.test(p);
+  result.hasTable = /表格|表|数据|列表|table|grid/i.test(p);
+  result.hasForm = /表单|输入|登录|注册|form/i.test(p);
+  result.hasCard = /卡片|看板|卡片|card/i.test(p);
+
+  // 智能推断：看板类应该包含卡片和图表
+  if (result.theme === 'dashboard' && !result.hasCard && !result.hasChart && !result.hasTable) {
+    result.hasNav = true;
+    result.hasCard = true;
+    result.hasChart = true;
+    result.hasTable = true;
+  }
+  // 官网类应该有导航和卡片
+  if (result.theme === 'landing' && !result.hasNav) result.hasNav = true;
+
+  // 电商类默认有表格和图表
+  if (result.theme === 'ecommerce' && !result.hasTable) result.hasTable = true;
+  if (result.theme === 'ecommerce' && !result.hasChart) result.hasChart = true;
+
+  // 后台管理默认有表格
+  if (result.theme === 'admin' && !result.hasTable) result.hasTable = true;
+
+  return result;
+}
+
+// ===== 生成预览 HTML =====
 function generatePreviewHTML(prompt, dsId) {
   var ds = null;
   if (dsId) {
@@ -218,220 +452,161 @@ function generatePreviewHTML(prompt, dsId) {
   var dsFonts = (ds && ds.fonts) || [];
   var fontFamily = dsFonts.length > 0 ? "'" + dsFonts[0].name + "', " + (dsFonts[0].family || 'sans-serif') : 'system-ui, -apple-system, sans-serif';
 
-  // 从 DS 获取真实图标名（用于侧边栏）
-  var dsIcons = (ds && ds.icons) || [];
-  var navIconNames = dsIcons.slice(0, 4).map(function(ic) { return ic.label || ic.name; });
-  while (navIconNames.length < 4) {
-    var defaults = ['概览', '项目', '成员', '设置'];
-    navIconNames.push(defaults[navIconNames.length]);
-  }
-
-  // 从 DS 获取真实组件名
+  // 从 DS 获取组件名
   var dsComponents = (ds && ds.components) || [];
-  var compNames = dsComponents.slice(0, 3).map(function(c) { return c.name; });
-  while (compNames.length < 3) {
-    var defaultComps = ['主按钮', '次要按钮', '输入框'];
+  var compNames = dsComponents.slice(0, 4).map(function(c) { return c.name; });
+  while (compNames.length < 4) {
+    var defaultComps = ['主按钮', '次要按钮', '输入框', '卡片'];
     compNames.push(defaultComps[compNames.length]);
   }
 
+  // ═══ AI 语义分析 ═══
+  var analysis = analyzePrompt(prompt);
+  var theme = AI_THEMES[analysis.theme];
+  var topic = analysis.topic || prompt.slice(0, Math.min(10, prompt.length));
+  var navTitles = theme.navItems(topic);
+  var statData = theme.stats(topic);
+  var tableData = theme.tableRows(topic, compNames);
+
+  // ===== 开始生成 HTML =====
   var sidebarWidth = 220;
-
-  // 关键词检测（基于用户输入）
-  var hasNav = prompt.indexOf('导航') >= 0 || prompt.indexOf('侧边栏') >= 0 || prompt.indexOf('菜单') >= 0;
-  var hasChart = prompt.indexOf('图表') >= 0 || prompt.indexOf('折线') >= 0 || prompt.indexOf('趋势') >= 0 || prompt.indexOf('统计') >= 0;
-  var hasTable = prompt.indexOf('表格') >= 0 || prompt.indexOf('数据') >= 0;
-  var hasForm = prompt.indexOf('表单') >= 0 || prompt.indexOf('输入') >= 0 || prompt.indexOf('登录') >= 0;
-  var hasCard = prompt.indexOf('卡片') >= 0 || prompt.indexOf('看板') >= 0;
-  var hasList = prompt.indexOf('列表') >= 0;
-
-  // 没有明确特征时给默认布局
-  if (!hasNav && !hasChart && !hasTable && !hasForm && !hasCard && !hasList) {
-    hasNav = true;
-    hasChart = true;
-    hasCard = true;
-  }
-
   var html = '<!DOCTYPE html><html><head><style>';
   html += '*{margin:0;padding:0;box-sizing:border-box}';
   html += 'body{background:#f5f5f7;min-height:100vh;font-family:' + fontFamily + '}';
   html += '.app{display:flex;min-height:100vh}';
 
-  // 侧边栏（使用 DS 颜色 + 图标名）
-  if (hasNav) {
+  if (analysis.hasNav) {
     html += '.sidebar{width:' + sidebarWidth + 'px;background:' + primaryColor + ';color:#fff;padding:20px 0;display:flex;flex-direction:column}';
     html += '.sidebar-logo{padding:0 16px 24px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}';
-    html += '.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.7);font-size:13px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}';
-    html += '.sidebar-item:hover,.sidebar-item.active{background:rgba(255,255,255,.1);color:#fff;border-left-color:#fff}';
+    html += '.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.7);font-size:13px;cursor:pointer;transition:all .15s}';
+    html += '.sidebar-item:hover,.sidebar-item.active{background:rgba(255,255,255,.1);color:#fff}';
     html += '.sidebar-item.active{background:rgba(255,255,255,.15)}';
     html += '.sidebar-spacer{flex:1}';
     html += '.sidebar-bottom{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:rgba(255,255,255,.5)}';
   }
 
-  // 主内容区
-  html += '.main{flex:1;padding:24px;overflow-y:auto}';
-
-  // 页面头部
-  html += '.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}';
+  html += '.main{flex:1;padding:24px 32px;overflow-y:auto}';
+  html += '.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}';
   html += '.page-header h2{font-size:20px;font-weight:600;color:#1a1a2e}';
   html += '.page-header-actions{display:flex;gap:8px}';
   html += '.btn{padding:8px 16px;border-radius:6px;border:none;font-size:13px;cursor:pointer;font-weight:500}';
   html += '.btn-primary{background:' + primaryColor + ';color:#fff}';
   html += '.btn-secondary{background:#e8e8ed;color:#555}';
 
-  // 统计卡片
-  if (hasCard) {
-    html += '.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}';
-    html += '.stat-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}';
-    html += '.stat-card-label{font-size:12px;color:#8e8ea0;margin-bottom:4px}';
-    html += '.stat-card-value{font-size:24px;font-weight:700;color:#1a1a2e}';
-    html += '.stat-card-change{font-size:11px;margin-top:4px}';
-    html += '.stat-card-change.up{color:' + secondaryColor + '}';
-    html += '.stat-card-change.down{color:#EF4444}';
-    html += '.stat-card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:16px}';
+  if (analysis.hasCard) {
+    html += '.stats-row{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}';
+    html += '.stat-card{flex:1;min-width:180px;background:#fff;border-radius:12px;padding:20px}';
+    html += '.stat-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}';
+    html += '.stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px}';
+    html += '.stat-label{font-size:12px;color:#8e8ea0;margin-bottom:4px}';
+    html += '.stat-value{font-size:22px;font-weight:700;color:#1a1a2e}';
+    html += '.stat-change{font-size:11px;margin-top:6px}';
+    html += '.change-up{color:' + secondaryColor + '}';
+    html += '.change-down{color:#EF4444}';
+    html += '.two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;margin-bottom:24px}';
+  } else {
+    html += '.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}';
   }
 
-  // 图表区域
-  if (hasChart) {
-    html += '.chart-section{background:#fff;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}';
-    html += '.chart-section h3{font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:16px}';
-    html += '.chart-placeholder{height:200px;background:linear-gradient(135deg,' + primaryColor + '15,' + secondaryColor + '10);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}';
-    html += '.chart-line{position:absolute;bottom:30px;left:10%;width:80%;height:60%}';
-    html += '.chart-line svg{width:100%;height:100%}';
-  }
+  html += '.section{background:#fff;border-radius:12px;padding:20px}';
+  html += '.section h3{font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:16px}';
+  html += 'table{width:100%;border-collapse:collapse;font-size:12px}';
+  html += 'th{padding:10px 12px;text-align:left;border-bottom:2px solid #f0f0f0;color:#8e8ea0;font-weight:500;font-size:11px;text-transform:uppercase}';
+  html += 'td{padding:10px 12px;border-bottom:1px solid #f5f5f7;color:#555}';
+  html += '.tag{padding:2px 8px;border-radius:4px;font-size:11px;background:' + primaryColor + '10;color:' + primaryColor + '}';
+  html += '.chart-box{height:200px;background:linear-gradient(135deg,' + primaryColor + '08,' + secondaryColor + '04);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}';
 
-  // 表格
-  if (hasTable) {
-    html += '.table-section{background:#fff;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}';
-    html += '.table-section h3{font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:16px}';
-    html += 'table{width:100%;border-collapse:collapse;font-size:12px}';
-    html += 'th{padding:10px 12px;text-align:left;border-bottom:2px solid #f0f0f0;color:#8e8ea0;font-weight:500}';
-    html += 'td{padding:10px 12px;border-bottom:1px solid #f5f5f7;color:#555}';
-    html += 'td.status{display:flex;align-items:center;gap:4px}';
-    html += '.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block}';
-    html += '.status-dot.online{background:' + secondaryColor + '}';
-    html += '.status-dot.offline{background:#ddd}';
-    html += '.tag{padding:2px 8px;border-radius:4px;font-size:11px;background:' + primaryColor + '10;color:' + primaryColor + '}';
-  }
-
-  // 表单
-  if (hasForm) {
-    html += '.form-section{background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06);max-width:480px}';
-    html += '.form-section h3{font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:16px}';
+  // 表单样式
+  if (analysis.hasForm) {
+    html += '.form-wrap{background:#fff;border-radius:12px;padding:24px;max-width:480px}';
     html += '.form-group{margin-bottom:16px}';
-    html += 'label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:500}';
-    html += 'input[type=text],input[type=email]{width:100%;padding:10px 12px;border:1px solid #e0e0e5;border-radius:6px;font-size:13px;outline:none}';
+    html += '.form-group label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:500}';
+    html += 'input[type=text],input[type=email],input[type=password]{width:100%;padding:10px 12px;border:1px solid #e0e0e5;border-radius:6px;font-size:13px;outline:none;box-sizing:border-box}';
     html += 'input:focus{border-color:' + primaryColor + '}';
     html += '.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}';
   }
 
-  html += '</style></head><body>';
-  html += '<div class="app">';
+  html += '</style></head><body><div class="app">';
 
-  // ═══ 侧边栏（使用 DS 真实图标名 ═══
-  if (hasNav) {
+  // 侧边栏
+  if (analysis.hasNav) {
     html += '<div class="sidebar">';
     html += '<div class="sidebar-logo"><span style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px">◆</span>' + (ds ? ds.name : 'Flowa') + '</div>';
-    html += '<div class="sidebar-item active"><span>📊</span><span>' + navIconNames[0] + '</span></div>';
-    html += '<div class="sidebar-item"><span>📁</span><span>' + navIconNames[1] + '</span></div>';
-    html += '<div class="sidebar-item"><span>👥</span><span>' + navIconNames[2] + '</span></div>';
-    html += '<div class="sidebar-item"><span>⚙️</span><span>' + navIconNames[3] + '</span></div>';
+    var navs = ['📊','📁','👥','⚙️'];
+    navTitles.forEach(function(n, i) {
+      html += '<div class="sidebar-item' + (i === 0 ? ' active' : '') + '"><span>' + (navs[i] || '•') + '</span><span>' + n + '</span></div>';
+    });
     html += '<div class="sidebar-spacer"></div>';
-    html += '<div class="sidebar-bottom">' + (ds ? ds.name : 'Flowa') + ' Design</div>';
+    html += '<div class="sidebar-bottom">' + (ds ? ds.name : 'Flowa') + ' · ' + analysis.theme + '</div>';
     html += '</div>';
   }
 
   html += '<div class="main" id="ai-gen-preview-main">';
 
-  // 页面头部（使用 DS 组件名）
-  html += '<div class="page-header" id="page-header">';
-  html += '<h2>' + (prompt.length > 20 ? prompt.slice(0, 20) + '...' : prompt) + '</h2>';
+  // 页面标题
+  html += '<div class="page-header"><h2>' + theme.pageTitle(topic) + '</h2>';
   html += '<div class="page-header-actions">';
-  html += '<button class="btn btn-secondary">' + (compNames[1] || '次要') + '</button>';
-  html += '<button class="btn btn-primary">' + (compNames[0] || '主按钮') + '</button>';
+  html += '<button class="btn btn-secondary">' + (compNames[1] || '返回') + '</button>';
+  html += '<button class="btn btn-primary">' + (compNames[0] || '新建') + '</button>';
   html += '</div></div>';
 
-  // 统计卡片（使用 DS 颜色）
-  if (hasCard) {
-    var statsLabels = ['总用户', '活跃项目', '营收', '转化率'];
-    if (dsFonts.length > 0) statsLabels[0] = dsFonts[0].name + ' 用户';
-    if (dsComponents.length > 0) statsLabels[1] = dsComponents[0].category + ' 数';
-    html += '<div class="stats">';
-    for (var si = 0; si < 4; si++) {
-      var statColor = colors[si % colors.length];
+  // 统计卡片
+  if (analysis.hasCard) {
+    html += '<div class="stats-row">';
+    statData.forEach(function(s, i) {
+      var c = colors[i % colors.length];
       html += '<div class="stat-card">';
-      html += '<div class="stat-card-icon" style="background:' + statColor + '15;color:' + statColor + '">' + ['👤','📁','💰','📈'][si] + '</div>';
-      html += '<div class="stat-card-label">' + statsLabels[si] + '</div>';
-      html += '<div class="stat-card-value">' + ['12,846','342','¥86,240','3.24%'][si] + '</div>';
-      html += '<div class="stat-card-change ' + (si < 3 ? 'up' : 'down') + '">' + ['+12.5%','+8.2%','+23.1%','-1.2%'][si] + '</div>';
+      html += '<div class="stat-icon" style="background:' + c + '15;color:' + c + '">' + s.icon + '</div>';
+      html += '<div class="stat-label">' + s.label + '</div>';
+      html += '<div class="stat-value">' + s.value + '</div>';
+      html += '<div class="stat-change ' + (s.up ? 'change-up' : 'change-down') + '">' + s.change + '</div>';
       html += '</div>';
-    }
+    });
     html += '</div>';
   }
 
+  // 两栏布局：图表 + 表格
+  html += '<div class="two-col">';
+
   // 图表
-  if (hasChart) {
-    html += '<div class="chart-section" id="图表">';
-    html += '<h3>月度趋势</h3>';
-    html += '<div class="chart-placeholder">';
-    html += '<div class="chart-line"><svg viewBox="0 0 300 150"><path d="M0,120 Q37.5,90 75,100 T150,70 T225,50 T300,30" fill="none" stroke="' + primaryColor + '" stroke-width="2.5"/><path d="M0,120 Q37.5,105 75,110 T150,90 T225,75 T300,60" fill="none" stroke="' + secondaryColor + '" stroke-width="2" stroke-dasharray="4,4" opacity=".6"/></svg></div>';
-    html += '<span style="color:#8e8ea0;font-size:12px">📈 ' + (ds ? ds.name + ' 趋势' : '趋势数据') + '</span>';
+  if (analysis.hasChart) {
+    html += '<div class="section">';
+    html += '<h3>' + theme.chartTitle(topic) + '</h3>';
+    html += '<div class="chart-box">';
+    html += '<svg viewBox="0 0 300 150" style="width:90%;height:90%">';
+    html += '<path d="M0,120 Q37.5,90 75,100 T150,70 T225,50 T300,30" fill="none" stroke="' + primaryColor + '" stroke-width="2.5"/>';
+    html += '<path d="M0,120 Q37.5,105 75,110 T150,90 T225,75 T300,60" fill="none" stroke="' + secondaryColor + '" stroke-width="2" stroke-dasharray="4,4" opacity=".6"/>';
+    html += '</svg>';
+    html += '<span style="position:absolute;bottom:12px;color:#8e8ea0;font-size:11px">' + theme.chartLabel(topic) + '</span>';
     html += '</div></div>';
   }
 
   // 表格
-  if (hasTable) {
-    html += '<div class="table-section" id="数据表格">';
-    html += '<h3>' + (ds ? ds.name : '项目') + '列表</h3>';
-    html += '<table><thead><tr><th>名称</th><th>负责人</th><th>状态</th><th>进度</th></tr></thead><tbody>';
-    var tableRows = [
-      { name: compNames[0] || '主按钮', owner: '张设计', status: '进行中', progress: 65, online: true },
-      { name: compNames[1] || '输入框', owner: '李开发', status: '已完成', progress: 100, online: true },
-      { name: compNames[2] || '导航栏', owner: '王产品', status: '暂停', progress: 30, online: false },
-      { name: (dsComponents[3] && dsComponents[3].name) || '数据表格', owner: '赵测试', status: '进行中', progress: 45, online: true }
-    ];
-    tableRows.forEach(function(r) {
-      html += '<tr><td>' + r.name + '</td><td>' + r.owner + '</td><td class="status"><span class="status-dot ' + (r.online ? 'online' : 'offline') + '"></span>' + r.status + '</td><td><span class="tag">' + r.progress + '%</span></td></tr>';
+  if (analysis.hasTable) {
+    html += '<div class="section">';
+    html += '<h3>' + topic + '列表</h3>';
+    html += '<table><thead><tr>';
+    theme.tableHeaders.forEach(function(h) { html += '<th>' + h + '</th>'; });
+    html += '</tr></thead><tbody>';
+    tableData.forEach(function(r) {
+      html += '<tr><td><strong>' + r.name + '</strong></td><td>' + r.owner + '</td>';
+      html += '<td><span class="stat-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + (r.online ? secondaryColor : '#ddd') + ';margin-right:4px"></span>' + r.status + '</td>';
+      html += '<td>' + (r.pct < 100 ? '<span class="tag">' + r.pct + '%</span>' : '<span style="color:' + secondaryColor + '">✓ 完成</span>') + '</td></tr>';
     });
     html += '</tbody></table></div>';
   }
 
+  html += '</div>'; // end two-col
+
   // 表单
-  if (hasForm) {
-    html += '<div class="form-section" id="表单">';
-    html += '<h3>' + (compNames[0] || '新建') + '</h3>';
-    html += '<div class="form-group"><label>' + (dsFonts.length > 0 ? dsFonts[0].name : '项目名称') + '</label><input type="text" placeholder="请输入" value="' + (ds ? ds.name : 'Flowa') + '"></div>';
-    html += '<div class="form-group"><label>邮箱</label><input type="email" placeholder="请输入邮箱" value="team@' + (ds ? ds.name.replace(/[\s]/g, '').toLowerCase() : 'flowa') + '.com"></div>';
+  if (analysis.hasForm) {
+    html += '<div class="form-wrap">';
+    html += '<h3 style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:16px">' + (compNames[0] || '新建') + '</h3>';
+    html += '<div class="form-group"><label>' + (dsFonts.length > 0 ? dsFonts[0].name : '名称') + '</label><input type="text" placeholder="请输入" value="' + topic + '"></div>';
+    html += '<div class="form-group"><label>邮箱</label><input type="email" value="hello@' + (ds ? ds.name.replace(/[\s]/g,'').toLowerCase() : 'flowa') + '.com"></div>';
+    html += '<div class="form-group"><label>密码</label><input type="password" value="••••••••"></div>';
     html += '<div class="form-actions"><button class="btn btn-secondary">' + (compNames[1] || '取消') + '</button><button class="btn btn-primary">' + (compNames[0] || '提交') + '</button></div>';
     html += '</div>';
-  }
-
-  // 组件展示区（展示 DS 中的真实组件预览）
-  if (dsComponents.length > 0) {
-    html += '<div class="chart-section" id="组件预览">';
-    html += '<h3>组件库样式预览</h3>';
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
-    var maxShow = Math.min(6, dsComponents.length);
-    for (var ci = 0; ci < maxShow; ci++) {
-      var cName = dsComponents[ci].name;
-      var cColor = colors[ci % colors.length];
-      html += '<span style="padding:4px 12px;background:' + cColor + '22;color:' + cColor + ';border-radius:4px;font-size:12px;font-weight:500;border:1px solid ' + cColor + '33">' + cName + '</span>';
-    }
-    if (dsComponents.length > 6) {
-      html += '<span style="padding:4px 12px;background:#f0f0f0;border-radius:4px;font-size:12px;color:#999">+' + (dsComponents.length - 6) + ' 更多</span>';
-    }
-    html += '</div></div>';
-  }
-
-  // 字体展示区
-  if (dsFonts.length > 0) {
-    html += '<div class="chart-section">';
-    html += '<h3>字体规范</h3>';
-    html += '<div style="display:flex;gap:16px;flex-wrap:wrap">';
-    dsFonts.forEach(function(f) {
-      var fallback = f.family || 'sans-serif';
-      html += '<div style="padding:12px 16px;background:#f9fafb;border-radius:8px"><div style="font-family:\'' + f.name + '\', ' + fallback + ';font-size:16px;font-weight:500;margin-bottom:4px">' + f.name + '</div><div style="font-size:11px;color:#999">' + (f.sample || '字体示例') + ' · ' + (f.category || 'sans-serif') + '</div></div>';
-    });
-    html += '</div></div>';
   }
 
   html += '</div></div></body></html>';

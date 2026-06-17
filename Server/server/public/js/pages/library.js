@@ -148,25 +148,32 @@ function openDSDetail(id) {
 }
 
 window.deleteDesignSystem = function(id) {
-  if (!confirm('确定要删除此组件库吗？此操作不可恢复。')) return;
+  // 使用自定义确认弹窗
+  showConfirmDialog({
+    title: '删除组件库',
+    message: '确定要删除此组件库吗？此操作不可恢复。',
+    confirmText: '确认删除',
+    confirmClass: 'btn-danger',
+    onConfirm: function() {
+      var idx = -1;
+      for (var i = 0; i < designSystems.length; i++) {
+        if (designSystems[i].id === id) { idx = i; break; }
+      }
+      if (idx === -1) { showToast('未找到该组件库', 'error'); return; }
 
-  var idx = -1;
-  for (var i = 0; i < designSystems.length; i++) {
-    if (designSystems[i].id === id) { idx = i; break; }
-  }
-  if (idx === -1) { showToast('未找到该组件库', 'error'); return; }
+      var name = designSystems[idx].name;
+      designSystems.splice(idx, 1);
+      saveDesignSystems(designSystems);
 
-  var name = designSystems[idx].name;
-  designSystems.splice(idx, 1);
-  saveDesignSystems(designSystems);
-
-  // 如果当前在详情页且删除的是当前查看的 DS，返回列表
-  if (currentDS && currentDS.id === id) {
-    navigateTo('library');
-  } else {
-    renderLibraryPage();
-  }
-  showToast('已删除组件库「' + name + '」', 'success');
+      // 如果当前在详情页且删除的是当前查看的 DS，返回列表
+      if (currentDS && currentDS.id === id) {
+        navigateTo('library');
+      } else {
+        renderLibraryPage();
+      }
+      showToast('已删除组件库「' + name + '」', 'success');
+    }
+  });
 };
 
 window.renameDesignSystem = function(id) {
@@ -231,6 +238,52 @@ window.confirmRename = function(id) {
     }
   }
   showToast('未找到该组件库', 'error');
+};
+
+// ===== 通用确认对话框 =====
+window.showConfirmDialog = function(opts) {
+  opts = opts || {};
+  var title = opts.title || '确认';
+  var message = opts.message || '确定要执行此操作吗？';
+  var confirmText = opts.confirmText || '确认';
+  var cancelText = opts.cancelText || '取消';
+  var confirmClass = opts.confirmClass || 'btn-primary';
+  var onConfirm = opts.onConfirm || function() {};
+  var onCancel = opts.onCancel || function() {};
+
+  var modalId = 'confirm-dialog-' + Date.now();
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active';
+  overlay.id = modalId;
+  overlay.innerHTML =
+    '<div class="modal" style="max-width:400px" onclick="event.stopPropagation()">' +
+      '<div class="modal-header">' +
+        '<h3>' + title + '</h3>' +
+        '<button class="modal-close-btn" onclick="document.getElementById(\'' + modalId + '\').remove()">' +
+          '<svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#close"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<div style="padding:20px 20px 24px;font-size:14px;color:var(--text);line-height:1.6">' +
+        message +
+      '</div>' +
+      '<div class="modal-actions" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">' +
+        '<button class="btn btn-ghost" onclick="document.getElementById(\'' + modalId + '\').remove()">' + cancelText + '</button>' +
+        '<button class="btn ' + confirmClass + '" id="confirm-dialog-btn">' + confirmText + '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  // 绑定确认事件
+  setTimeout(function() {
+    var btn = document.getElementById('confirm-dialog-btn');
+    if (btn) {
+      btn.onclick = function() {
+        var m = document.getElementById(modalId);
+        if (m) m.remove();
+        onConfirm();
+      };
+    }
+  }, 50);
 };
 
 // ===== 新建组件库弹窗 =====

@@ -203,6 +203,26 @@ function generateAIResponse(prompt, dsId, dsName) {
 
 // 主题模板库
 var AI_THEMES = {
+  // ═══ 登录/注册页面 ═══
+  login: {
+    keywords: ['登录','login','注册','signin','signup','账号','密码','登录页','注册页'],
+    isFormPage: true,
+    title: function(topic) { return topic + ' - 登录'; },
+    pageTitle: function(topic) { return topic; },
+    navItems: function() { return []; },
+    stats: function() { return []; },
+    tableHeaders: [],
+    tableRows: function() { return []; },
+    formTitle: function(topic, comps) { return comps[0] || '登录'; },
+    formFields: function(topic, dsFonts) {
+      return [
+        { label: dsFonts.length > 0 ? dsFonts[0].name : '用户名', type: 'text', placeholder: '请输入用户名' },
+        { label: '密码', type: 'password', placeholder: '请输入密码' }
+      ];
+    },
+    chartTitle: function() { return ''; },
+    chartLabel: function() { return ''; }
+  },
   // 数据看板/仪表盘
   dashboard: {
     keywords: ['看板','dashboard','总览','概览','数据','统计','指标','监控','大屏','分析','报表','汇报'],
@@ -386,16 +406,29 @@ function analyzePrompt(prompt) {
   // 取第二个词作为核心主题（第一个词通常是动词）
   result.topic = topicWords[1] || topicWords[0] || '';
 
-  // 匹配主题模板
+  // 匹配主题模板（登录页优先）
   var maxScore = 0;
+  var loginScore = 0;
+
+  // 先检测登录/注册关键词（高优先级）
+  if (/登录|注册|login|signin|signup|账号|密码/.test(prompt)) {
+    loginScore = 10;
+    result.theme = 'login';
+  }
+
   for (var t in AI_THEMES) {
+    if (t === 'login') continue;
     var score = 0;
     AI_THEMES[t].keywords.forEach(function(kw) {
       if (prompt.indexOf(kw) >= 0) score += 2;
-      // 也检查拼音近义词
       if (kw.length >= 2 && prompt.indexOf(kw.slice(0, 2)) >= 0) score += 1;
     });
     if (score > maxScore) { maxScore = score; result.theme = t; }
+  }
+
+  // 登录关键词覆盖其他（除非其他主题匹配度极高 > 8）
+  if (loginScore >= 10 && maxScore < 8) {
+    result.theme = 'login';
   }
 
   // 部分匹配也要考虑
@@ -486,6 +519,25 @@ function generatePreviewHTML(prompt, dsId) {
   }
 
   html += '.main{flex:1;padding:24px 32px;overflow-y:auto}';
+
+  // ═══ 登录/注册页专用样式 ═══
+  if (analysis.theme === 'login') {
+    html += 'body{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,' + primaryColor + '22,' + primaryColor + '08);min-height:100vh}';
+    html += '.app{margin:auto}';
+    html += '.login-card{background:#fff;border-radius:16px;padding:40px;width:400px;box-shadow:0 8px 40px rgba(0,0,0,.08);text-align:center}';
+    html += '.login-card .logo{width:48px;height:48px;border-radius:12px;background:' + primaryColor + ';display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;color:#fff}';
+    html += '.login-card h2{font-size:20px;font-weight:600;color:#1a1a2e;margin-bottom:4px}';
+    html += '.login-card .sub{font-size:13px;color:#8e8ea0;margin-bottom:28px}';
+    html += '.form-group{margin-bottom:20px;text-align:left}';
+    html += '.form-group label{display:block;font-size:12px;color:#555;margin-bottom:6px;font-weight:500}';
+    html += '.form-group input{width:100%;padding:12px 14px;border:1px solid #e0e0e5;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;transition:border-color .15s}';
+    html += '.form-group input:focus{border-color:' + primaryColor + ';box-shadow:0 0 0 3px ' + primaryColor + '15}';
+    html += '.login-card .btn-primary{width:100%;padding:12px;border-radius:8px;font-size:14px;margin-top:4px}';
+    html += '.login-card .extra{font-size:12px;color:#8e8ea0;margin-top:20px}';
+    html += '.login-card .extra a{color:' + primaryColor + ';text-decoration:none}';
+    html += '.login-card .error{font-size:12px;color:#EF4444;margin-bottom:12px;display:none}';
+  }
+
   html += '.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}';
   html += '.page-header h2{font-size:20px;font-weight:600;color:#1a1a2e}';
   html += '.page-header-actions{display:flex;gap:8px}';
@@ -541,35 +593,56 @@ function generatePreviewHTML(prompt, dsId) {
     html += '</div>';
   }
 
-  html += '<div class="main" id="ai-gen-preview-main">';
-
-  // 页面标题
-  html += '<div class="page-header"><h2>' + theme.pageTitle(topic) + '</h2>';
-  html += '<div class="page-header-actions">';
-  html += '<button class="btn btn-secondary">' + (compNames[1] || '返回') + '</button>';
-  html += '<button class="btn btn-primary">' + (compNames[0] || '新建') + '</button>';
-  html += '</div></div>';
-
-  // 统计卡片
-  if (analysis.hasCard) {
-    html += '<div class="stats-row">';
-    statData.forEach(function(s, i) {
-      var c = colors[i % colors.length];
-      html += '<div class="stat-card">';
-      html += '<div class="stat-icon" style="background:' + c + '15;color:' + c + '">' + s.icon + '</div>';
-      html += '<div class="stat-label">' + s.label + '</div>';
-      html += '<div class="stat-value">' + s.value + '</div>';
-      html += '<div class="stat-change ' + (s.up ? 'change-up' : 'change-down') + '">' + s.change + '</div>';
-      html += '</div>';
+  // ═══ 登录页面 ═══
+  if (analysis.theme === 'login') {
+    html += '<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:100vh" id="ai-gen-preview-main">';
+    var loginTitle = theme.formTitle(topic, compNames);
+    var loginFields = theme.formFields(topic, dsFonts);
+    var appName = ds ? ds.name : 'Flowa';
+    html += '<div class="login-card">';
+    html += '<div class="logo">🔐</div>';
+    html += '<h2>' + loginTitle + '</h2>';
+    html += '<p class="sub">欢迎回到 ' + appName + '</p>';
+    html += '<div class="error" id="login-error">用户名或密码错误</div>';
+    loginFields.forEach(function(f) {
+      html += '<div class="form-group"><label>' + f.label + '</label><input type="' + f.type + '" placeholder="' + f.placeholder + '" value="' + (f.type === 'text' ? 'user@' + appName.toLowerCase() : '') + '"></div>';
     });
+    var btnText = (compNames[0] || '登录').indexOf('登录') >= 0 || (compNames[0] || '').indexOf('登') >= 0 ? (compNames[0] || '登录') : '登录';
+    html += '<button class="btn btn-primary" onclick="document.getElementById(\'login-error\').style.display=\'block\'">' + btnText + '</button>';
+    html += '<div class="extra">没有账号？<a href="#">立即注册</a></div>';
     html += '</div>';
-  }
+    html += '</div>';
+  } else {
+    // ═══ 标准页面 ═══
+    html += '<div class="main" id="ai-gen-preview-main">';
 
-  // 两栏布局：图表 + 表格
-  html += '<div class="two-col">';
+    // 页面标题
+    html += '<div class="page-header"><h2>' + theme.pageTitle(topic) + '</h2>';
+    html += '<div class="page-header-actions">';
+    html += '<button class="btn btn-secondary">' + (compNames[1] || '返回') + '</button>';
+    html += '<button class="btn btn-primary">' + (compNames[0] || '新建') + '</button>';
+    html += '</div></div>';
 
-  // 图表
-  if (analysis.hasChart) {
+    // 统计卡片
+    if (analysis.hasCard) {
+      html += '<div class="stats-row">';
+      statData.forEach(function(s, i) {
+        var c = colors[i % colors.length];
+        html += '<div class="stat-card">';
+        html += '<div class="stat-icon" style="background:' + c + '15;color:' + c + '">' + s.icon + '</div>';
+        html += '<div class="stat-label">' + s.label + '</div>';
+        html += '<div class="stat-value">' + s.value + '</div>';
+        html += '<div class="stat-change ' + (s.up ? 'change-up' : 'change-down') + '">' + s.change + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // 两栏布局：图表 + 表格
+    html += '<div class="two-col">';
+
+    // 图表
+    if (analysis.hasChart) {
     html += '<div class="section">';
     html += '<h3>' + theme.chartTitle(topic) + '</h3>';
     html += '<div class="chart-box">';
@@ -610,8 +683,9 @@ function generatePreviewHTML(prompt, dsId) {
   }
 
   html += '</div></div></body></html>';
+  } // end else (非登录页)
   return html;
-}
+} // end generatePreviewHTML
 
 // ===== 预览 iframe 更新 =====
 function updatePreview(html) {

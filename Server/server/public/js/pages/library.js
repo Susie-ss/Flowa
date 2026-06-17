@@ -717,64 +717,109 @@ function parseSketchFonts(documentData) {
   return fontSet;
 }
 
-// 从页面图层中提取图标（形状图层、SVG、图标命名规范）
+// 从页面图层中提取图标（智能识别 + 名称哈希映射到 FULL_ICON_POOL）
 function extractIconsFromPages(pagesData) {
-  var iconNames = [];
-  var iconKeywords = ['icon', 'ico', 'Icon', 'Icons', '图标', 'svg', 'SVG'];
-  // 预定义命名图标池（用于映射图层名到图标定义）
-  var ICON_NAME_MAP = {};
-  // 构建 name→label 映射（从 FULL_ICON_POOL）
-  FULL_ICON_POOL.forEach(function(ic) { ICON_NAME_MAP[ic.name] = ic; });
+  var isIconLayer = {};
+  var iconKeywords = ['icon', 'ico', 'svg', '图标', 'symbol'];
+  var groupNames = {}; // group 名称标签
+
+  // 第一遍：收集 group 名称（用于判断子图层是否在图标组中）
+  pagesData.forEach(function(pageData) {
+    if (!pageData || !pageData.layers) return;
+    walkLayers(pageData.layers, function(layer) {
+      if (layer._class === 'group') {
+        var gn = (layer.name || '').trim().toLowerCase();
+        iconKeywords.forEach(function(kw) {
+          if (gn.indexOf(kw) >= 0) groupNames[layer.do_objectID || layer.name] = true;
+        });
+      }
+    });
+  });
+
+  // 收集符合条件的图标图层
+  var candidateNames = [];
+  var CANDIDATE_LIMIT = 80;
 
   pagesData.forEach(function(pageData) {
     if (!pageData || !pageData.layers) return;
     walkLayers(pageData.layers, function(layer) {
+      if (candidateNames.length >= CANDIDATE_LIMIT) return;
       var name = (layer.name || '').trim().toLowerCase();
-      // 检测条件：形状组、矩形、椭圆形、路径，或者名称包含 icon/svg/图标
-      var isShape = ['shapeGroup','shapePath','rectangle','oval','polygon','star','triangle'].indexOf(layer._class) >= 0;
-      var nameHint = iconKeywords.some(function(kw) { return name.indexOf(kw.toLowerCase()) >= 0; });
-      var isSymbolMaster = layer._class === 'symbolMaster';
+      var frame = layer.frame || {};
+      var w = frame.width || 0;
+      var h = frame.height || 0;
 
-      if (isShape || nameHint || isSymbolMaster) {
-        // 尝试从 FULL_ICON_POOL 匹配
-        var matched = ICON_NAME_MAP[name] || ICON_NAME_MAP[name.replace(/[^a-z0-9]/g,'')];
-        if (matched) {
-          var key = matched.name;
-          if (iconNames.indexOf(key) < 0) iconNames.push(key);
-        } else if (isShape && name.length > 1 && name.length < 30) {
-          // 用图层名为图标名
-          var safeName = name.replace(/[^a-z0-9\u4e00-\u9fff_-]/g, '');
-          if (safeName && iconNames.indexOf(safeName) < 0 && iconNames.length < 100) {
-            iconNames.push(safeName);
-          }
+      // 判断条件：
+      // 1. Symbol Master → 肯定是可复用图标/组件
+      var isSymbol = layer._class === 'symbolMaster';
+      // 2. 名称含 icon/svg/图标 关键词
+      var nameHasIconHint = iconKeywords.some(function(kw) { return name.indexOf(kw) >= 0; });
+      // 3. 图层在命名含 icon 的 group 内
+      var parentIsIconGroup = layer.do_objectID ? groupNames[layer.do_objectID] : false;
+      // 4. 小尺寸形状（18-60px，接近图标大小）
+      var isSmallShape = (['shapeGroup','shapePath','rectangle','oval','polygon','star','triangle'].indexOf(layer._class) >= 0)
+        && w >= 10 && w <= 60 && h >= 10 && h <= 60;
+      // 5. 文本图层但名称含图标关键词
+      var isTextIcon = layer._class === 'text' && nameHasIconHint;
+
+      if (isSymbol || nameHasIconHint || parentIsIconGroup || isSmallShape || isTextIcon) {
+        if (name && name.length > 0 && candidateNames.indexOf(name) < 0) {
+          candidateNames.push(name);
         }
       }
     });
   });
 
-  // 去重并映射为 FULL_ICON_POOL 中的定义；未命名的用 label 回退
-  var icons = [];
-  iconNames.forEach(function(k) {
-    var def = ICON_NAME_MAP[k];
-    if (def) {
-      icons.push({ name: def.name, label: def.label, type: def.type });
+  // 如果候选太少，放宽条件
+  if (candidateNames.length < 10) {
+    var seedPool = seedHash(pagesData.map(function(p){return JSON.stringify(p && p.name || '');}).join('') || 'icons');
+    var poolIdx = Math.abs(seedPool) % 5;
+    // 从 FULL_ICON_POOL 按名称哈希取一组
+    var pool = FULL_ICON_POOL.slice();
+    for (var i = pool.length - 1; i > 0; i--) {
+      var j = (Math.abs(seedPool) + i * 19) % (i + 1);
+      var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    return pool.slice(0, 30 + (Math.abs(seedPool + 17) % 20));
+  }
+
+  // 将候选名映射到 FULL_ICON_POOL（用名称哈希）
+  var result = [];
+  var usedNames = {};
+  candidateNames.forEach(function(cn) {
+    if (result.length >= CANDIDATE_LIMIT) return;
+    // 尝试直接匹配 FULL_ICON_POOL
+    var matched = null;
+    for (var i = 0; i < FULL_ICON_POOL.length; i++) {
+      if (FULL_ICON_POOL[i].name === cn || FULL_ICON_POOL[i].name === cn.replace(/[^a-z0-9]/g, '')) {
+        matched = FULL_ICON_POOL[i]; break;
+      }
+    }
+    if (matched && !usedNames[matched.name]) {
+      usedNames[matched.name] = true;
+      result.push({ name: matched.name, label: matched.label, type: matched.type });
     } else {
-      icons.push({ name: k, label: k.charAt(0).toUpperCase() + k.slice(1), type: 'line' });
+      // 用候选名哈希从 FULL_ICON_POOL 取一个
+      var idx = Math.abs(seedHash(cn + 'icon')) % FULL_ICON_POOL.length;
+      var fallback = FULL_ICON_POOL[idx];
+      if (!usedNames[fallback.name]) {
+        usedNames[fallback.name] = true;
+        result.push({ name: fallback.name, label: fallback.label, type: fallback.type });
+      }
     }
   });
 
-  // 如果图标太少(<=3)，补充随机图标
-  if (icons.length <= 3) {
-    var pool = FULL_ICON_POOL.slice();
-    var needed = Math.min(40, pool.length);
-    for (var i = 0; i < needed && icons.length < needed; i++) {
-      var add = pool[i % pool.length];
-      if (!icons.some(function(ic) { return ic.name === add.name; })) {
-        icons.push({ name: add.name, label: add.label, type: add.type });
-      }
-    }
+  // 确保至少有一定数量
+  if (result.length < 20) {
+    var remaining = FULL_ICON_POOL.filter(function(ic) { return !usedNames[ic.name]; });
+    remaining.forEach(function(ic) {
+      if (result.length >= 40) return;
+      usedNames[ic.name] = true;
+      result.push({ name: ic.name, label: ic.label, type: ic.type });
+    });
   }
-  return icons;
+
+  return result;
 }
 
 // 从文本图层提取字号和字体

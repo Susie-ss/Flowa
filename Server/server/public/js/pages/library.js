@@ -736,14 +736,12 @@ function extractIconsFromPages(pagesData) {
     });
   });
 
-  // 收集符合条件的图标图层
+  // 收集符合条件的图标图层（不限数量）
   var candidateNames = [];
-  var CANDIDATE_LIMIT = 80;
 
   pagesData.forEach(function(pageData) {
     if (!pageData || !pageData.layers) return;
     walkLayers(pageData.layers, function(layer) {
-      if (candidateNames.length >= CANDIDATE_LIMIT) return;
       var name = (layer.name || '').trim().toLowerCase();
       var frame = layer.frame || {};
       var w = frame.width || 0;
@@ -787,7 +785,6 @@ function extractIconsFromPages(pagesData) {
   var result = [];
   var usedNames = {};
   candidateNames.forEach(function(cn) {
-    if (result.length >= CANDIDATE_LIMIT) return;
     // 尝试直接匹配 FULL_ICON_POOL
     var matched = null;
     for (var i = 0; i < FULL_ICON_POOL.length; i++) {
@@ -863,45 +860,52 @@ function extractTextStylesFromPages(pagesData) {
 }
 
 // 从 pages 中提取组件（symbolInstance / symbolMaster）
+// 去重策略：按组件名称的"基名"分组（如 "Button/Primary" → "Button"），合并同类项
 function extractComponentsFromPages(pagesData) {
   var compMap = {};
-  var COMP_KEYWORDS = ['button','btn','input','card','modal','dialog','table','form','nav','tab','list','item','badge','tag','header','footer','sidebar','menu','dropdown','picker','slider','switch','checkbox','radio','progress','spinner','alert','toast','tooltip','popover','upload','avatar','chip','chip'];
+  var baseCompMap = {};  // baseName → { count, cat, names[] }
+  var COMP_KEYWORDS = ['button','btn','input','card','modal','dialog','table','form','nav','tab','list','item','badge','tag','header','footer','sidebar','menu','dropdown','picker','slider','switch','checkbox','radio','progress','spinner','alert','toast','tooltip','popover','upload','avatar'];
 
   pagesData.forEach(function(pageData) {
     if (!pageData || !pageData.layers) return;
     walkLayers(pageData.layers, function(layer) {
-      var name = (layer.name || '').trim().toLowerCase();
-      // symbolInstance 或 symbolMaster → 组件
-      if (layer._class === 'symbolInstance' || layer._class === 'symbolMaster') {
-        var cat = '自定义';
-        COMP_KEYWORDS.forEach(function(kw) {
-          if (name.indexOf(kw) >= 0) {
-            cat = kw.charAt(0).toUpperCase() + kw.slice(1);
-            if (cat === 'Btn') cat = '按钮';
-            else if (cat === 'Nav') cat = '导航';
-            else if (['Button','Btn','Input','Card','Modal','Dialog','Table','Form','Tab','List','Item','Badge','Tag','Chip'].indexOf(kw) >= 0) {
-              var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',chip:'展示'};
-              cat = catMap[kw] || '组件';
-            }
-          }
-        });
-        if (!compMap[name]) {
-          compMap[name] = { name: layer.name, category: cat, type: 'symbol', props: name, css: '.custom-symbol' };
+      var name = (layer.name || '').trim();
+      var nameLower = name.toLowerCase();
+      if (layer._class !== 'symbolInstance' && layer._class !== 'symbolMaster') return;
+
+      // 过滤掉明显的图标/装饰类 symbol（名称为单字符、纯数字、含 "icon/" 路径）
+      if (name.length <= 1 || /^\d+$/.test(nameLower) || nameLower.indexOf('icon/') >= 0) return;
+
+      // 提取基名：取 "/" 或 " / " 分隔的第一段
+      var baseName = name.split(/[\/／]/)[0].trim();
+      if (!baseName || baseName.length <= 1) baseName = name;
+
+      // 分词：按 camelCase / PascalCase / 空格 分割
+      var words = baseName.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s_\/-]+/).filter(Boolean);
+
+      // 检测类别
+      var cat = '组件';
+      for (var k = 0; k < COMP_KEYWORDS.length; k++) {
+        var kw = COMP_KEYWORDS[k];
+        if (nameLower.indexOf(kw) >= 0) {
+          var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',header:'布局',footer:'布局',sidebar:'布局',menu:'导航',dropdown:'表单',slider:'表单',switch:'表单',checkbox:'表单',radio:'表单',progress:'反馈',spinner:'反馈',alert:'反馈',toast:'反馈',tooltip:'反馈',popover:'反馈',upload:'表单',avatar:'展示'};
+          cat = catMap[kw] || '组件';
+          break;
         }
       }
-      // 组的名称包含组件关键词
-      else if (layer._class === 'group' && name.length > 1 && name.length < 30) {
-        COMP_KEYWORDS.forEach(function(kw) {
-          if (name.indexOf(kw) >= 0 && !compMap[name]) {
-            var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',chip:'展示',header:'布局',footer:'布局',sidebar:'布局',menu:'导航',dropdown:'表单',slider:'表单',switch:'表单',checkbox:'表单',radio:'表单',progress:'反馈',spinner:'反馈',alert:'反馈',toast:'反馈',tooltip:'反馈',popover:'反馈',upload:'表单',avatar:'展示'};
-            compMap[name] = { name: layer.name, category: catMap[kw] || '组件', type: 'group', props: name, css: '.custom-component' };
-          }
-        });
+
+      // 去重：同一基名只保留一个
+      if (!compMap[baseName]) {
+        compMap[baseName] = { name: baseName, category: cat, type: 'symbol', props: baseName, css: '.custom-symbol' };
+      } else if (compMap[baseName].category === '组件' && cat !== '组件') {
+        compMap[baseName].category = cat;
       }
     });
   });
 
-  return Object.keys(compMap).map(function(k) { return compMap[k]; });
+  // 转数组并统计数量显示
+  var result = Object.keys(compMap).map(function(k) { return compMap[k]; });
+  return result;
 }
 
 // 主解析函数
@@ -1530,13 +1534,32 @@ function renderComponentsTab() {
   }
 
   // 为自定义组件（symbol/group）生成缩略图预览
-  function getCustomCompPreview(name) {
+  function getCustomCompPreview(name, category) {
     var colors = ['#5B5EF4','#22C55E','#F59E0B','#EF4444','#A855F7','#06B6D4','#8B5CF6','#EC4899'];
     var colorIdx = Math.abs(seedHash(name)) % colors.length;
     var bgColor = colors[colorIdx];
-    // 根据颜色生成带名称首字母的色块缩略图
-    var initial = name.charAt(0).toUpperCase() || 'C';
-    return '<div style="width:100%;height:60px;background:linear-gradient(135deg,' + bgColor + '22,' + bgColor + '11);border-radius:6px;display:flex;align-items:center;justify-content:center;border:1px solid ' + bgColor + '22;overflow:hidden"><div style="width:32px;height:32px;border-radius:8px;background:' + bgColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:600">' + initial + '</div></div>';
+    var cat = (category || '').toLowerCase();
+
+    // 根据分类生成不同样式的缩略图预览
+    var previewHTML;
+    if (cat.indexOf('按钮') >= 0 || cat.indexOf('btn') >= 0) {
+      previewHTML = '<div style="display:inline-flex;gap:6px"><div style="padding:6px 14px;background:' + bgColor + ';border-radius:4px;color:#fff;font-size:11px;font-weight:500">Button</div><div style="padding:6px 14px;border:1px solid ' + bgColor + '44;border-radius:4px;color:' + bgColor + ';font-size:11px">Ghost</div></div>';
+    } else if (cat.indexOf('表单') >= 0 || cat.indexOf('input') >= 0 || cat.indexOf('form') >= 0) {
+      previewHTML = '<div style="display:flex;flex-direction:column;gap:6px;width:100%"><div style="height:8px;width:40%;background:' + bgColor + '44;border-radius:3px"></div><div style="height:28px;border:1px solid ' + bgColor + '44;border-radius:4px;display:flex;align-items:center;padding:0 10px;font-size:10px;color:' + bgColor + '88">Placeholder</div></div>';
+    } else if (cat.indexOf('容器') >= 0 || cat.indexOf('card') >= 0 || cat.indexOf('modal') >= 0) {
+      previewHTML = '<div style="background:#fff;border:1px solid ' + bgColor + '33;border-radius:6px;padding:10px;width:100%"><div style="display:flex;gap:6px;margin-bottom:8px"><div style="width:24px;height:24px;border-radius:4px;background:' + bgColor + '33"></div><div><div style="height:8px;width:60px;background:' + bgColor + '33;border-radius:3px;margin-bottom:4px"></div><div style="height:6px;width:40px;background:' + bgColor + '22;border-radius:3px"></div></div></div><div style="height:6px;width:100%;background:' + bgColor + '11;border-radius:3px;margin-bottom:4px"></div><div style="height:6px;width:80%;background:' + bgColor + '11;border-radius:3px"></div></div>';
+    } else if (cat.indexOf('导航') >= 0 || cat.indexOf('nav') >= 0 || cat.indexOf('tab') >= 0) {
+      previewHTML = '<div style="display:flex;gap:4px;width:100%"><div style="flex:1;padding:6px 0;text-align:center;font-size:10px;color:#fff;background:' + bgColor + ';border-radius:4px;font-weight:500">Nav</div><div style="flex:1;padding:6px 0;text-align:center;font-size:10px;color:' + bgColor + ';border:1px solid ' + bgColor + '44;border-radius:4px">Item</div></div>';
+    } else if (cat.indexOf('数据') >= 0 || cat.indexOf('table') >= 0 || cat.indexOf('list') >= 0) {
+      previewHTML = '<div style="width:100%"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:4px"><div style="height:6px;background:' + bgColor + '44;border-radius:3px"></div><div style="height:6px;background:' + bgColor + '44;border-radius:3px"></div><div style="height:6px;background:' + bgColor + '44;border-radius:3px"></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px"><div style="height:6px;background:' + bgColor + '22;border-radius:3px"></div><div style="height:6px;background:' + bgColor + '22;border-radius:3px"></div><div style="height:6px;background:' + bgColor + '22;border-radius:3px"></div></div></div>';
+    } else if (cat.indexOf('展示') >= 0 || cat.indexOf('avatar') >= 0 || cat.indexOf('badge') >= 0) {
+      previewHTML = '<div style="display:flex;align-items:center;gap:8px"><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,' + bgColor + ',' + colors[(colorIdx+3)%colors.length] + ');display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:600">A</div><div style="padding:2px 8px;background:' + bgColor + '22;border-radius:8px;font-size:9px;color:' + bgColor + ';font-weight:500">Badge</div></div>';
+    } else {
+      // 默认：生成带名称首字母的色块 + 组件名称标签
+      var initials = name.split(/[\s\/-]+/).map(function(w){return w.charAt(0).toUpperCase();}).filter(Boolean).slice(0,3).join('');
+      previewHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:36px;height:36px;border-radius:8px;background:' + bgColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600">' + (initials || name.charAt(0).toUpperCase()) + '</div><span style="font-size:10px;color:' + bgColor + ';font-weight:500;text-align:center;line-height:1.2">' + name.split(/[\s\/-]+/).slice(0,2).join(' ') + '</span></div>';
+    }
+    return '<div style="width:100%;min-height:72px;background:linear-gradient(135deg,' + bgColor + '11,' + bgColor + '08);border-radius:6px;display:flex;align-items:center;justify-content:center;border:1px solid ' + bgColor + '22;overflow:hidden;padding:10px">' + previewHTML + '</div>';
   }
 
   var gridHTML = components.map(function(comp) {
@@ -1559,7 +1582,7 @@ function renderComponentsTab() {
                   : '<span style="' + previewStyle + '">' + comp.props + '</span>';
     } else {
       // 自定义类型 → 色块缩略图
-      previewTag = getCustomCompPreview(comp.name);
+      previewTag = getCustomCompPreview(comp.name, comp.category);
     }
 
     return '<div class="component-card">' +

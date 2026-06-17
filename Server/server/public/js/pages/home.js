@@ -51,7 +51,7 @@ async function renderHomePage() {
           '<div class="icon-wrap" style="background:#F0FDF4"><svg class="icon-color" style="font-size:18px"><use href="/libs/iconpark/icons.svg#ico-tag"/></svg></div>' +
           '<div class="label">标签数</div>' +
           '<div class="value">' + (s.tagCount || 0) + '</div>' +
-          '<div class="change up">产品线数量</div>' +
+          '<div class="change up">标签数量</div>' +
         '</div>' +
       '</div>' +
 

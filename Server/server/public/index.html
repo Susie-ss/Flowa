@@ -72,50 +72,6 @@
   </div>
 
   <!-- ===== MODALS ===== -->
-  <!-- Login Modal -->
-  <div class="modal-overlay" id="login-modal">
-    <div class="modal">
-      <div class="modal-header"><h3 style="margin:0">登录</h3><button class="modal-close-btn" onclick="hideModal('login-modal')"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#close"/></svg></button></div>
-      <div class="form-row">
-        <label>用户名</label>
-        <input type="text" id="login-username" placeholder="请输入用户名" />
-      </div>
-      <div class="form-row">
-        <label>密码</label>
-        <input type="password" id="login-password" placeholder="请输入密码" />
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="hideModal('login-modal')">取消</button>
-        <button class="btn btn-primary" onclick="doLogin()">登录</button>
-      </div>
-      <div style="text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary)">
-        没有账号？<a href="/register" style="color:var(--primary);cursor:pointer">立即注册</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Register Modal -->
-  <div class="modal-overlay" id="register-modal">
-    <div class="modal">
-      <div class="modal-header"><h3 style="margin:0">注册</h3><button class="modal-close-btn" onclick="hideModal('register-modal')"><svg class="iconpark iconpark-lg"><use href="/libs/iconpark/sprite.svg#close"/></svg></button></div>
-      <div class="form-row">
-        <label>用户名</label>
-        <input type="text" id="register-username" placeholder="至少3位" />
-      </div>
-      <div class="form-row">
-        <label>密码</label>
-        <input type="password" id="register-password" placeholder="至少6位" />
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="hideModal('register-modal')">取消</button>
-        <button class="btn btn-primary" onclick="doRegister()">注册</button>
-      </div>
-      <div style="text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary)">
-        已有账号？<a href="/login" style="color:var(--primary);cursor:pointer">立即登录</a>
-      </div>
-    </div>
-  </div>
-
   <!-- New Tag Modal -->
   <div class="modal-overlay" id="new-product-line-modal">
     <div class="modal" style="width:440px">

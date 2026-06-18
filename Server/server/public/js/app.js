@@ -109,7 +109,7 @@ async function doLogin() {
       setTokens(result.accessToken, result.refreshToken);
       currentUser = { userId: result.user.id, username: result.user.username, nickname: result.user.nickname };
       showMainUI();
-      history.pushState(null, '', '/');
+      navigateTo('products');
     } else {
       if (errEl) errEl.textContent = result.error || result.message || '登录失败';
     }

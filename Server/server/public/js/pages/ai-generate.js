@@ -520,22 +520,34 @@ function generatePreviewHTML(prompt, dsId) {
 
   html += '.main{flex:1;padding:24px 32px;overflow-y:auto}';
 
-  // ═══ 登录/注册页专用样式 ═══
+  // ═══ 登录/注册页专用样式（匹配产品整体风格：左侧品牌大图 + 右侧表单卡片） ═══
   if (analysis.theme === 'login') {
-    html += 'body{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,' + primaryColor + '22,' + primaryColor + '08);min-height:100vh}';
-    html += '.app{margin:auto}';
-    html += '.login-card{background:#fff;border-radius:16px;padding:40px;width:400px;box-shadow:0 8px 40px rgba(0,0,0,.08);text-align:center}';
-    html += '.login-card .logo{width:48px;height:48px;border-radius:12px;background:' + primaryColor + ';display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;color:#fff}';
-    html += '.login-card h2{font-size:20px;font-weight:600;color:#1a1a2e;margin-bottom:4px}';
-    html += '.login-card .sub{font-size:13px;color:#8e8ea0;margin-bottom:28px}';
-    html += '.form-group{margin-bottom:20px;text-align:left}';
-    html += '.form-group label{display:block;font-size:12px;color:#555;margin-bottom:6px;font-weight:500}';
-    html += '.form-group input{width:100%;padding:12px 14px;border:1px solid #e0e0e5;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;transition:border-color .15s}';
-    html += '.form-group input:focus{border-color:' + primaryColor + ';box-shadow:0 0 0 3px ' + primaryColor + '15}';
-    html += '.login-card .btn-primary{width:100%;padding:12px;border-radius:8px;font-size:14px;margin-top:4px}';
-    html += '.login-card .extra{font-size:12px;color:#8e8ea0;margin-top:20px}';
-    html += '.login-card .extra a{color:' + primaryColor + ';text-decoration:none}';
-    html += '.login-card .error{font-size:12px;color:#EF4444;margin-bottom:12px;display:none}';
+    html += 'body{background:#F6F7FB;min-height:100vh}';
+    html += '.app{display:flex;min-height:100vh}';
+    // 左侧品牌区
+    html += '.login-banner{flex:1;background:linear-gradient(135deg,' + primaryColor + ' 0%,' + primaryColor + '99 60%,#2A2D8F 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 48px;position:relative;overflow:hidden;color:#fff}';
+    html += '.login-banner::before{content:"";position:absolute;width:500px;height:500px;border-radius:50%;background:rgba(255,255,255,.06);top:-120px;right:-100px;pointer-events:none}';
+    html += '.login-banner::after{content:"";position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04);bottom:-60px;left:-80px;pointer-events:none}';
+    html += '.login-banner-logo{width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:32px;position:relative;z-index:1;background:rgba(255,255,255,.15);font-size:32px}';
+    html += '.login-banner h1{font-size:28px;font-weight:800;margin-bottom:12px;position:relative;z-index:1}';
+    html += '.login-banner p{font-size:15px;line-height:1.7;opacity:.85;text-align:center;max-width:340px;position:relative;z-index:1}';
+    html += '.login-banner-features{list-style:none;margin-top:36px;position:relative;z-index:1}';
+    html += '.login-banner-features li{display:flex;align-items:center;gap:12px;font-size:14px;opacity:.9;margin-bottom:14px}';
+    html += '.login-banner-features li .feature-icon{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}';
+    // 右侧表单区
+    html += '.login-form-side{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 32px;background:#F6F7FB}';
+    html += '.login-card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:40px;width:100%;max-width:400px}';
+    html += '.login-card h2{font-size:22px;font-weight:700;margin-bottom:4px;color:#1A1D2E}';
+    html += '.login-card .sub{color:#6B7280;font-size:14px;margin-bottom:28px}';
+    html += '.form-group{margin-bottom:18px}';
+    html += '.form-group label{display:block;font-size:12px;color:#6B7280;margin-bottom:5px;font-weight:500}';
+    html += '.form-group input{width:100%;padding:8px 10px;border:1px solid #E8EAEF;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;background:#F6F7FB;font-family:inherit;transition:border-color .15s}';
+    html += '.form-group input:focus{border-color:' + primaryColor + ';background:#fff}';
+    html += '.login-card .btn-primary{width:100%;justify-content:center;padding:12px;margin-top:4px}';
+    html += '.login-card .btn-primary:hover{background:#3D40C4;transform:translateY(-1px);box-shadow:0 4px 12px ' + primaryColor + '59}';
+    html += '.login-card .extra{text-align:center;margin-top:20px;font-size:13px;color:#6B7280}';
+    html += '.login-card .extra a{color:' + primaryColor + ';cursor:pointer;font-weight:500;text-decoration:none}';
+    html += '.login-card .error{font-size:12px;color:#EF4444;margin-bottom:12px;display:none;text-align:left}';
   }
 
   html += '.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}';
@@ -593,14 +605,25 @@ function generatePreviewHTML(prompt, dsId) {
     html += '</div>';
   }
 
-  // ═══ 登录页面 ═══
+  // ═══ 登录页面（两栏布局：左侧品牌大图 + 右侧表单卡片） ═══
   if (analysis.theme === 'login') {
-    html += '<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:100vh" id="ai-gen-preview-main">';
     var loginTitle = theme.formTitle(topic, compNames);
     var loginFields = theme.formFields(topic, dsFonts);
     var appName = ds ? ds.name : 'Flowa';
+    // ===== 左侧品牌宣传区 =====
+    html += '<div class="login-banner">';
+    html += '<div class="login-banner-logo">◆</div>';
+    html += '<h1>' + appName + '</h1>';
+    html += '<p>专业的原型设计平台，帮助团队高效协作</p>';
+    html += '<ul class="login-banner-features">';
+    html += '<li><span class="feature-icon">🎨</span>拖拽式组件，快速搭建原型</li>';
+    html += '<li><span class="feature-icon">🤝</span>实时评论，团队协作无缝衔接</li>';
+    html += '<li><span class="feature-icon">📱</span>多设备预览，还原真实体验</li>';
+    html += '</ul>';
+    html += '</div>';
+    // ===== 右侧表单区 =====
+    html += '<div class="login-form-side" id="ai-gen-preview-main">';
     html += '<div class="login-card">';
-    html += '<div class="logo">🔐</div>';
     html += '<h2>' + loginTitle + '</h2>';
     html += '<p class="sub">欢迎回到 ' + appName + '</p>';
     html += '<div class="error" id="login-error">用户名或密码错误</div>';
@@ -610,8 +633,7 @@ function generatePreviewHTML(prompt, dsId) {
     var btnText = (compNames[0] || '登录').indexOf('登录') >= 0 || (compNames[0] || '').indexOf('登') >= 0 ? (compNames[0] || '登录') : '登录';
     html += '<button class="btn btn-primary" onclick="document.getElementById(\'login-error\').style.display=\'block\'">' + btnText + '</button>';
     html += '<div class="extra">没有账号？<a href="#">立即注册</a></div>';
-    html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
   } else {
     // ═══ 标准页面 ═══
     html += '<div class="main" id="ai-gen-preview-main">';

@@ -807,9 +807,10 @@ function extractIconsFromPages(pagesData) {
       var nameHasIconHint = iconKeywords.some(function(kw) { return name.indexOf(kw) >= 0; });
       // 3. 图层在命名含 icon 的 group 内
       var parentIsIconGroup = layer.do_objectID ? groupNames[layer.do_objectID] : false;
-      // 4. 小尺寸形状（18-60px，接近图标大小）
+      // 4. 小尺寸形状（仅限形状类且父级已是图标组或名称含图标关键词）
       var isSmallShape = (['shapeGroup','shapePath','rectangle','oval','polygon','star','triangle'].indexOf(layer._class) >= 0)
-        && w >= 10 && w <= 60 && h >= 10 && h <= 60;
+        && w >= 10 && w <= 60 && h >= 10 && h <= 60
+        && (nameHasIconHint || parentIsIconGroup);
       // 5. 文本图层但名称含图标关键词
       var isTextIcon = layer._class === 'text' && nameHasIconHint;
 
@@ -821,18 +822,8 @@ function extractIconsFromPages(pagesData) {
     });
   });
 
-  // 如果候选太少，放宽条件
-  if (candidateNames.length < 10) {
-    var seedPool = seedHash(pagesData.map(function(p){return JSON.stringify(p && p.name || '');}).join('') || 'icons');
-    var poolIdx = Math.abs(seedPool) % 5;
-    // 从 FULL_ICON_POOL 按名称哈希取一组
-    var pool = FULL_ICON_POOL.slice();
-    for (var i = pool.length - 1; i > 0; i--) {
-      var j = (Math.abs(seedPool) + i * 19) % (i + 1);
-      var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
-    }
-    return pool.slice(0, 30 + (Math.abs(seedPool + 17) % 20));
-  }
+  // 如果候选太少，直接用候选名（不再自动填充随机图标）
+  // （候选为空时返回空数组，由调用方处理降级）
 
   // 将候选名映射到 FULL_ICON_POOL（用名称哈希）
   var result = [];
@@ -858,16 +849,6 @@ function extractIconsFromPages(pagesData) {
       }
     }
   });
-
-  // 确保至少有一定数量
-  if (result.length < 20) {
-    var remaining = FULL_ICON_POOL.filter(function(ic) { return !usedNames[ic.name]; });
-    remaining.forEach(function(ic) {
-      if (result.length >= 40) return;
-      usedNames[ic.name] = true;
-      result.push({ name: ic.name, label: ic.label, type: ic.type });
-    });
-  }
 
   return result;
 }
@@ -1019,11 +1000,11 @@ function parseSketchFile(file) {
               if (components.length > 0) result.components = components;
             }
 
-            // 如果某些数据为空，补充默认值
-            if (result.icons.length === 0) result.icons = generateIconSet(result.name, 20 + (seedHash(result.name) % 15));
-            if (result.fonts.length === 0) result.fonts = generateFontSet(result.name, 2 + (seedHash(result.name + 'f') % 2));
-            if (result.components.length === 0) result.components = generateComponentSet(result.name, 8 + (seedHash(result.name + 'c') % 10));
-            if (result.sizes.length === 0) result.sizes = generateSizeSet(result.name, 5 + (seedHash(result.name + 's') % 4));
+            // 如果某些数据为空，保留空数组（不再自动填充虚拟图标/组件）
+            if (!result.icons) result.icons = [];
+            if (!result.fonts) result.fonts = [];
+            if (!result.components) result.components = [];
+            if (!result.sizes) result.sizes = [];
             if (result.colors.length === 0) {
               var palettes = [['#5B5EF4','#22C55E','#F59E0B','#EF4444'],['#3B82F6','#10B981','#F97316','#EC4899'],['#8B5CF6','#06B6D4','#14B8A6','#F43F5E']];
               result.colors = palettes[seedHash(result.name) % palettes.length];
@@ -1373,7 +1354,7 @@ var DEFAULT_SIZES = [
 ];
 
 // 获取当前DS的数据，fallback 到默认值
-function getDSIcons()   { return (currentDS && currentDS.icons && currentDS.icons.length > 0) ? currentDS.icons : FULL_ICON_POOL; }
+function getDSIcons()   { return (currentDS && currentDS.icons && currentDS.icons.length > 0) ? currentDS.icons : []; }
 function getDSFonts()   { return (currentDS && currentDS.fonts && currentDS.fonts.length > 0) ? currentDS.fonts : DEFAULT_FONTS; }
 function getDSComponents() { return (currentDS && currentDS.components && currentDS.components.length > 0) ? currentDS.components : DEFAULT_COMPONENTS; }
 function getDSSizes()  { return (currentDS && currentDS.sizes && currentDS.sizes.length > 0) ? currentDS.sizes : DEFAULT_SIZES; }

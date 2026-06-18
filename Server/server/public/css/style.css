@@ -768,43 +768,6 @@ button {
   margin: 20px 0;
 }
 
-.input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 12px;
-  pointer-events: none;
-  flex-shrink: 0;
-}
-
-.input-wrap input {
-  width: 100%;
-  padding: 10px 12px 10px 36px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--text);
-  outline: none;
-  background: var(--bg);
-  font-family: inherit;
-  transition: all .2s;
-}
-
-.input-wrap input:focus {
-  border-color: var(--primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px var(--primary-light);
-}
-
-.input-wrap input:focus ~ .input-icon,
-.input-wrap input:focus + .input-icon {
-  stroke: var(--primary);
-}
-
 .auth-btn {
   width: 100%;
   justify-content: center;
@@ -1358,6 +1321,45 @@ button {
   resize: none;
   height: 80px;
   line-height: 1.5;
+}
+
+/* ===== Auth Input Icons (放在 .form-row 之后确保优先级) ===== */
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.input-wrap input[type="text"],
+.input-wrap input[type="password"] {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  background: var(--bg);
+  font-family: inherit;
+  transition: all .2s;
+}
+
+.input-wrap input[type="text"]:focus,
+.input-wrap input[type="password"]:focus {
+  border-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.input-wrap:focus-within .input-icon {
+  stroke: var(--primary);
 }
 
 /* ===== Toast ===== */

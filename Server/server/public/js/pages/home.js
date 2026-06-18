@@ -61,14 +61,14 @@ async function renderHomePage() {
           '<h3 style="font-size:15px;font-weight:700">AI 智能生成</h3>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
-          '<div onclick="showAIGenerateModal()" style="background:linear-gradient(135deg,#5B5EF4,#8B5CF6);border-radius:var(--radius);padding:24px;cursor:pointer;color:#fff;transition:transform .2s;display:flex;align-items:center;gap:16px" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'none\'">' +
+          '<div onclick="navigateTo(\'ai-generate\')" style="background:linear-gradient(135deg,#5B5EF4,#8B5CF6);border-radius:var(--radius);padding:24px;cursor:pointer;color:#fff;transition:transform .2s;display:flex;align-items:center;gap:16px" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'none\'">' +
             '<div style="width:48px;height:48px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px">✨</div>' +
             '<div>' +
               '<div style="font-size:15px;font-weight:600;margin-bottom:4px">AI 生成原型</div>' +
               '<div style="font-size:12px;opacity:.8">描述需求，AI 自动生成原型界面</div>' +
             '</div>' +
           '</div>' +
-          '<div onclick="showAIGenerateModal()" style="background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);padding:24px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.background=\'var(--primary-light)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--surface)\'">' +
+          '<div onclick="navigateTo(\'ai-generate\')" style="background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);padding:24px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.background=\'var(--primary-light)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--surface)\'">' +
             '<div style="width:48px;height:48px;background:var(--bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">🎨</div>' +
             '<div>' +
               '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">匹配设计系统风格</div>' +

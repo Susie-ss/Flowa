@@ -874,12 +874,33 @@ function extractIconsFromPages(pagesData) {
     return words;
   }
 
+  // ===== 排除已知的非图标名称 =====
+  var stopWords = ['icon', 'icons', 'ico', 'normal', 'hover', 'disable', 'disabled', 'active',
+    'primary', 'default', 'fixed', 'gray', 'grey', 'square', 'circle', 'round',
+    'danger', 'warning', 'success', 'info', 'error', 'xs', 'sm', 'md', 'lg', 'xl',
+    'mini', 'max', 'min', 'backup', 'copy', '副本', '备份'];
+
+  function isStateWord(w) { return stopWords.indexOf(w) >= 0; }
+
+  function isNoise(name) {
+    if (!name || name.length < 2) return true;
+    if (/^\d+$/.test(name)) return true;
+    if (/^[\d\.\-\_\/\\s\+]+$/.test(name)) return true;
+    if (/^[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef\(\)\（\）\、\，\。\：\；\+\-\/\\]+$/.test(name)) return true;
+    var words = name.split(/[\-\_]/);
+    if (words.length <= 2 && words.every(isStateWord)) return true;
+    return false;
+  }
+
   // 将候选名映射到 FULL_ICON_POOL（匹配到的保留图标，未匹配的保留原名）
   var result = [];
   var usedNames = {};
   candidateNames.forEach(function(cn) {
     // 先从路径中提取真正的图标名
     var extracted = extractIconName(cn);
+    // 过滤噪声名称
+    if (isNoise(extracted)) return;
+    if (isNoise(cn)) return;
     // 尝试直接匹配
     var matched = tryMatch(extracted);
     // 尝试去掉短横线匹配

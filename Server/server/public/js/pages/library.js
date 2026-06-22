@@ -801,8 +801,8 @@ function extractIconsFromPages(pagesData) {
       var h = frame.height || 0;
 
       // 判断条件：
-      // 1. Symbol Master → 肯定是可复用图标/组件
-      var isSymbol = layer._class === 'symbolMaster';
+      // 1. Symbol Master/Instance → 肯定是可复用图标/组件
+      var isSymbol = layer._class === 'symbolMaster' || layer._class === 'symbolInstance';
       // 2. 名称含 icon/svg/图标 关键词
       var nameHasIconHint = iconKeywords.some(function(kw) { return name.indexOf(kw) >= 0; });
       // 3. 图层在命名含 icon 的 group 内
@@ -825,7 +825,7 @@ function extractIconsFromPages(pagesData) {
   // 如果候选太少，直接用候选名（不再自动填充随机图标）
   // （候选为空时返回空数组，由调用方处理降级）
 
-  // 将候选名映射到 FULL_ICON_POOL（用名称哈希）
+  // 将候选名映射到 FULL_ICON_POOL（匹配到的保留图标，未匹配的保留原名）
   var result = [];
   var usedNames = {};
   candidateNames.forEach(function(cn) {
@@ -839,14 +839,10 @@ function extractIconsFromPages(pagesData) {
     if (matched && !usedNames[matched.name]) {
       usedNames[matched.name] = true;
       result.push({ name: matched.name, label: matched.label, type: matched.type });
-    } else {
-      // 用候选名哈希从 FULL_ICON_POOL 取一个
-      var idx = Math.abs(seedHash(cn + 'icon')) % FULL_ICON_POOL.length;
-      var fallback = FULL_ICON_POOL[idx];
-      if (!usedNames[fallback.name]) {
-        usedNames[fallback.name] = true;
-        result.push({ name: fallback.name, label: fallback.label, type: fallback.type });
-      }
+    } else if (!usedNames[cn]) {
+      // 未匹配到 FULL_ICON_POOL → 保留原始图层名称（不再用哈希取随机图标）
+      usedNames[cn] = true;
+      result.push({ name: cn, label: cn, type: 'line' });
     }
   });
 

@@ -825,24 +825,94 @@ function extractIconsFromPages(pagesData) {
   // 如果候选太少，直接用候选名（不再自动填充随机图标）
   // （候选为空时返回空数组，由调用方处理降级）
 
+  // 从路径中提取真实图标名（如 "1.base/1.icon/5.navigation/angle-right备份" → "angle-right"）
+  function extractIconName(path) {
+    // 取最后一个 / 之后的部分
+    var last = path;
+    var parts = path.split('/');
+    if (parts.length > 1) last = parts[parts.length - 1];
+    // 去掉常见的尾缀词
+    var suffixes = ['备份', 'copy', '副本', '备份(2)'];
+    suffixes.forEach(function(s) {
+      if (last.indexOf(s) > last.length - s.length - 2) {
+        last = last.slice(0, last.lastIndexOf(s));
+      }
+    });
+    last = last.trim();
+    // 去掉数字前缀（如 "1.base" → "base", "5.navigation" → "navigation"）
+    last = last.replace(/^\d+[\.\-\s]*/g, '');
+    // 去掉拼音/中文
+    var clean = last.replace(/[^a-z0-9\-\_]/gi, '').replace(/[\-\_]+/g, '-').replace(/^-|-$/g, '');
+    return clean || last;
+  }
+
+  // 尝试从 FULL_ICON_POOL 中匹配候选名
+  function tryMatch(name) {
+    if (!name) return null;
+    var n = name.toLowerCase().trim();
+    for (var i = 0; i < FULL_ICON_POOL.length; i++) {
+      if (FULL_ICON_POOL[i].name === n) return FULL_ICON_POOL[i];
+    }
+    // 再试：按标签名（中文名）匹配
+    for (var i = 0; i < FULL_ICON_POOL.length; i++) {
+      if (FULL_ICON_POOL[i].label === n || FULL_ICON_POOL[i].label.indexOf(n) >= 0) {
+        return FULL_ICON_POOL[i];
+      }
+    }
+    return null;
+  }
+
+  // 从候选名中提取可能的英文关键词（拆分短横线/下划线，取各单词）
+  function extractKeywords(name) {
+    var words = [];
+    // 按分隔符拆分
+    var parts = name.split(/[\-\_\/\\\.\s\+]+/);
+    parts.forEach(function(p) {
+      p = p.trim().toLowerCase();
+      if (p && p.length >= 2 && /^[a-z][a-z0-9]*$/.test(p)) words.push(p);
+    });
+    return words;
+  }
+
   // 将候选名映射到 FULL_ICON_POOL（匹配到的保留图标，未匹配的保留原名）
   var result = [];
   var usedNames = {};
   candidateNames.forEach(function(cn) {
-    // 尝试直接匹配 FULL_ICON_POOL
-    var matched = null;
-    for (var i = 0; i < FULL_ICON_POOL.length; i++) {
-      if (FULL_ICON_POOL[i].name === cn || FULL_ICON_POOL[i].name === cn.replace(/[^a-z0-9]/g, '')) {
-        matched = FULL_ICON_POOL[i]; break;
+    // 先从路径中提取真正的图标名
+    var extracted = extractIconName(cn);
+    // 尝试直接匹配
+    var matched = tryMatch(extracted);
+    // 尝试去掉短横线匹配
+    if (!matched) matched = tryMatch(extracted.replace(/-/g, ''));
+    // 尝试仅英文部分（取第一个词）
+    if (!matched) {
+      var engPart = extracted.replace(/[^a-z0-9]/gi, '');
+      matched = tryMatch(engPart) || tryMatch(engPart.replace(/-/g, ''));
+    }
+    // 尝试关键词匹配（拆分短横线/下划线，取各单词匹配 pool 名称）
+    if (!matched) {
+      var keywords = extractKeywords(extracted);
+      for (var ki = 0; ki < keywords.length && !matched; ki++) {
+        // 尝试精确关键词匹配
+        matched = tryMatch(keywords[ki]);
+        // 尝试 pool 名称包含该关键词
+        if (!matched) {
+          for (var pi = 0; pi < FULL_ICON_POOL.length; pi++) {
+            if (FULL_ICON_POOL[pi].name.indexOf(keywords[ki]) >= 0) {
+              matched = FULL_ICON_POOL[pi];
+              break;
+            }
+          }
+        }
       }
     }
     if (matched && !usedNames[matched.name]) {
       usedNames[matched.name] = true;
       result.push({ name: matched.name, label: matched.label, type: matched.type });
     } else if (!usedNames[cn]) {
-      // 未匹配到 FULL_ICON_POOL → 保留原始图层名称（不再用哈希取随机图标）
+      // 未匹配到 FULL_ICON_POOL → 保留原始图层名称
       usedNames[cn] = true;
-      result.push({ name: cn, label: cn, type: 'line' });
+      result.push({ name: extracted || cn, label: cn, type: 'line' });
     }
   });
 

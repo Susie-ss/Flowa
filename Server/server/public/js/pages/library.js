@@ -878,17 +878,23 @@ function extractIconsFromPages(pagesData) {
   var stopWords = ['icon', 'icons', 'ico', 'normal', 'hover', 'disable', 'disabled', 'active',
     'primary', 'default', 'fixed', 'gray', 'grey', 'square', 'circle', 'round',
     'danger', 'warning', 'success', 'info', 'error', 'xs', 'sm', 'md', 'lg', 'xl',
-    'mini', 'max', 'min', 'backup', 'copy', '副本', '备份'];
+    'mini', 'max', 'min', 'backup', 'copy', '副本', '备份',
+    'loading', 'off', 'on', 'of', 'xx', 'xxs', 'xxx',
+    'maxdigits', 'doubledigits', 'singledigit', 'digit'];
 
   function isStateWord(w) { return stopWords.indexOf(w) >= 0; }
 
   function isNoise(name) {
     if (!name || name.length < 2) return true;
     if (/^\d+$/.test(name)) return true;
+    if (/^\d+px$/.test(name)) return true;
     if (/^[\d\.\-\_\/\\s\+]+$/.test(name)) return true;
     if (/^[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef\(\)\（\）\、\，\。\：\；\+\-\/\\]+$/.test(name)) return true;
+    // Sketch 自动生成的图层名（Path 1, Rectangle 10, Oval 3 等）
+    if (/^(path|rectangle|oval|polygon|shape|shapegroup|shapemerge|star|triangle|line|curve|text|group|symbol|page|artboard|slice)\s*\d*$/i.test(name)) return true;
+    // 所有单词都是状态词（如 "on-disabled", "off-loading"）
     var words = name.split(/[\-\_]/);
-    if (words.length <= 2 && words.every(isStateWord)) return true;
+    if (words.every(isStateWord)) return true;
     return false;
   }
 
@@ -930,9 +936,9 @@ function extractIconsFromPages(pagesData) {
     if (matched && !usedNames[matched.name]) {
       usedNames[matched.name] = true;
       result.push({ name: matched.name, label: matched.label, type: matched.type });
-    } else if (!usedNames[cn]) {
-      // 未匹配到 FULL_ICON_POOL → 保留原始图层名称
-      usedNames[cn] = true;
+    } else if (!usedNames[extracted]) {
+      // 未匹配到 FULL_ICON_POOL → 保留原始图层名称（用 extracted 去重）
+      usedNames[extracted] = true;
       result.push({ name: extracted || cn, label: cn, type: 'line' });
     }
   });

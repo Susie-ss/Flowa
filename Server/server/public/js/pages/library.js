@@ -557,7 +557,87 @@ var FULL_ICON_POOL = [
   { name: 'credit-card', label: '信用卡', type: 'line' }, { name: 'wallet', label: '钱包', type: 'line' },
   { name: 'shopping-cart', label: '购物车', type: 'line' }, { name: 'shopping-bag', label: '购物袋', type: 'solid' },
   { name: 'coffee', label: '咖啡', type: 'line' }, { name: 'clock', label: '时钟', type: 'line' },
-  { name: 'alarm', label: '闹钟', type: 'line' }, { name: 'timer', label: '计时器', type: 'line' }
+  { name: 'alarm', label: '闹钟', type: 'line' }, { name: 'timer', label: '计时器', type: 'line' },
+  // 项目管理 & 研发 (Worktile/PingCode 扩展)
+  { name: 'agile', label: '敏捷', type: 'line' }, { name: 'dashboard', label: '仪表盘', type: 'line' },
+  { name: 'project', label: '项目', type: 'line' }, { name: 'task', label: '任务', type: 'line' },
+  { name: 'sprint', label: '迭代', type: 'line' }, { name: 'epic', label: '史诗', type: 'line' },
+  { name: 'user-story', label: '用户故事', type: 'line' },
+  { name: 'milestone', label: '里程碑', type: 'line' }, { name: 'release', label: '发布', type: 'line' },
+  { name: 'gantt', label: '甘特图', type: 'line' }, { name: 'backlog', label: '待办', type: 'line' },
+  { name: 'bug', label: '缺陷', type: 'line' }, { name: 'issue', label: '问题', type: 'line' },
+  { name: 'requirement', label: '需求', type: 'line' }, { name: 'test-case', label: '测试用例', type: 'line' },
+  { name: 'test-plan', label: '测试计划', type: 'line' }, { name: 'testhub', label: '测试库', type: 'line' },
+  { name: 'wiki', label: '知识库', type: 'line' }, { name: 'knowledge', label: '知识', type: 'line' },
+  { name: 'document', label: '文档', type: 'line' }, { name: 'report', label: '报表', type: 'line' },
+  { name: 'insight', label: '洞察', type: 'line' }, { name: 'worktile', label: 'Worktile', type: 'line' },
+  { name: 'pingcode', label: 'PingCode', type: 'line' },
+  { name: 'app-project', label: '项目应用', type: 'line' }, { name: 'app-task', label: '任务应用', type: 'line' },
+  { name: 'app-testhub', label: '测试应用', type: 'line' }, { name: 'app-wiki', label: '知识应用', type: 'line' },
+  { name: 'app-insight', label: '洞察应用', type: 'line' }, { name: 'app-report', label: '报表应用', type: 'line' },
+  { name: 'app-calendar', label: '日历应用', type: 'line' }, { name: 'app-message', label: '消息应用', type: 'line' },
+  { name: 'app-crm', label: 'CRM应用', type: 'line' }, { name: 'app-okr', label: 'OKR应用', type: 'line' },
+  { name: 'app-approval', label: '审批应用', type: 'line' }, { name: 'app-agile', label: '敏捷应用', type: 'line' },
+  { name: 'app-pipeline', label: '管道应用', type: 'line' }, { name: 'app-portal', label: '门户应用', type: 'line' },
+  { name: 'app-drive', label: '云盘应用', type: 'line' }, { name: 'app-bulletin', label: '公告应用', type: 'line' },
+  { name: 'app-leave', label: '请假应用', type: 'line' }, { name: 'app-tracking', label: '追踪应用', type: 'line' },
+  { name: 'app-appraisal', label: '考核应用', type: 'line' }, { name: 'app-paid', label: '薪酬应用', type: 'line' },
+  { name: 'app-events', label: '事件应用', type: 'line' },
+  { name: 'goal', label: '目标', type: 'line' }, { name: 'objective', label: '目标(OKR)', type: 'line' },
+  { name: 'key-result', label: '关键结果', type: 'line' }, { name: 'portfolio', label: '项目集', type: 'line' },
+  { name: 'program', label: '项目群', type: 'line' }, { name: 'phase', label: '阶段', type: 'line' },
+  { name: 'team', label: '团队', type: 'line' }, { name: 'department', label: '部门', type: 'line' },
+  { name: 'organization', label: '组织', type: 'line' }, { name: 'capacity', label: '容量', type: 'line' },
+  { name: 'workload', label: '工作量', type: 'line' }, { name: 'velocity', label: '速度', type: 'line' },
+  { name: 'branch', label: '分支', type: 'line' }, { name: 'commit', label: '提交', type: 'line' },
+  { name: 'pull-request', label: '合并请求', type: 'line' }, { name: 'build', label: '构建', type: 'line' },
+  { name: 'deploy', label: '部署', type: 'line' }, { name: 'pipeline', label: '管道', type: 'line' },
+  { name: 'book-open', label: '打开书籍', type: 'line' },
+  { name: 'attachment', label: '附件', type: 'line' }, { name: 'mention', label: '提及', type: 'line' },
+  { name: 'remind', label: '提醒', type: 'line' }, { name: 'archive', label: '归档', type: 'line' },
+  { name: 'restore', label: '恢复', type: 'line' }, { name: 'merge', label: '合并', type: 'line' },
+  { name: 'history', label: '历史', type: 'line' }, { name: 'version', label: '版本', type: 'line' },
+  { name: 'template', label: '模板', type: 'line' }, { name: 'custom-field', label: '自定义字段', type: 'line' },
+  { name: 'discussion', label: '讨论', type: 'line' }, { name: 'review', label: '评审', type: 'line' },
+  { name: 'feedback', label: '反馈', type: 'line' }, { name: 'approval', label: '审批', type: 'line' },
+  { name: 'process', label: '流程', type: 'line' }, { name: 'rule', label: '规则', type: 'line' },
+  { name: 'automation', label: '自动化', type: 'line' }, { name: 'trigger', label: '触发器', type: 'line' },
+  { name: 'condition', label: '条件', type: 'line' }, { name: 'action', label: '操作', type: 'line' },
+  { name: 'formula', label: '公式', type: 'line' }, { name: 'calculation', label: '计算', type: 'line' },
+  { name: 'aggregation', label: '聚合', type: 'line' }, { name: 'rollup', label: '汇总', type: 'line' },
+  { name: 'briefcase', label: '公文包', type: 'line' },
+  { name: 'headset', label: '耳麦', type: 'line' },
+  { name: 'thumb-up', label: '赞', type: 'line' },
+  { name: 'robot', label: '机器人', type: 'line' },
+  { name: 'translate', label: '翻译', type: 'line' }, { name: 'language', label: '语言', type: 'line' },
+  { name: 'italic', label: '斜体', type: 'line' }, { name: 'bold', label: '加粗', type: 'line' },
+  { name: 'underline', label: '下划线', type: 'line' }, { name: 'strikethrough', label: '删除线', type: 'line' },
+  { name: 'indent', label: '缩进', type: 'line' }, { name: 'outdent', label: '减少缩进', type: 'line' },
+  { name: 'align-left', label: '左对齐', type: 'line' }, { name: 'align-center', label: '居中', type: 'line' },
+  { name: 'align-right', label: '右对齐', type: 'line' }, { name: 'align-justify', label: '两端对齐', type: 'line' },
+  { name: 'ordered-list', label: '有序列表', type: 'line' }, { name: 'bullet-list', label: '无序列表', type: 'line' },
+  { name: 'blockquote', label: '引用', type: 'line' }, { name: 'code-block', label: '代码块', type: 'line' },
+  { name: 'header', label: '标题', type: 'line' },
+  { name: 'chart', label: '图表', type: 'line' },
+  { name: 'angle-right', label: '右角度', type: 'line' },
+  { name: 'angle-left', label: '左角度', type: 'line' },
+  { name: 'angle-up', label: '上角度', type: 'line' },
+  { name: 'angle-down', label: '下角度', type: 'line' },
+  { name: 'drag', label: '拖拽', type: 'line' },
+  { name: 'progress', label: '进度', type: 'line' }, { name: 'percentage', label: '百分比', type: 'line' },
+  { name: 'safety', label: '安全', type: 'line' }, { name: 'secret', label: '密钥', type: 'line' },
+  { name: 'security', label: '安全设置', type: 'line' },
+  { name: 'android', label: 'Android', type: 'line' }, { name: 'apple', label: 'Apple', type: 'line' },
+  { name: 'ios', label: 'iOS', type: 'line' }, { name: 'github', label: 'GitHub', type: 'line' },
+  { name: 'jenkins', label: 'Jenkins', type: 'line' }, { name: 'docker', label: 'Docker', type: 'line' },
+  { name: 'wechat', label: '微信', type: 'line' }, { name: 'wecom', label: '企业微信', type: 'line' },
+  { name: 'airplane', label: '飞机', type: 'line' },
+  { name: 'asterisk', label: '星号', type: 'line' },
+  { name: 'caret-down', label: '下插入符', type: 'line' },
+  { name: 'caret-left', label: '左插入符', type: 'line' },
+  { name: 'caret-right', label: '右插入符', type: 'line' },
+  { name: 'hourglass', label: '沙漏', type: 'line' },
+
 ];
 
 function generateIconSet(seed, count) {
@@ -846,7 +926,7 @@ function extractIconsFromPages(pagesData) {
     return clean || last;
   }
 
-  // 尝试从 FULL_ICON_POOL 中匹配候选名
+  // 尝试匹配（支持别名和多种匹配策略）
   function tryMatch(name) {
     if (!name) return null;
     var n = name.toLowerCase().trim();
@@ -857,6 +937,20 @@ function extractIconsFromPages(pagesData) {
     for (var i = 0; i < FULL_ICON_POOL.length; i++) {
       if (FULL_ICON_POOL[i].label === n || FULL_ICON_POOL[i].label.indexOf(n) >= 0) {
         return FULL_ICON_POOL[i];
+      }
+    }
+    // 尝试去掉常见后缀匹配（-fill）
+    var withoutFill = n.replace(/-(fill|bold|line|solid)$/, '');
+    if (withoutFill !== n) {
+      for (var i = 0; i < FULL_ICON_POOL.length; i++) {
+        if (FULL_ICON_POOL[i].name === withoutFill) return FULL_ICON_POOL[i];
+      }
+    }
+    // 尝试去掉版本号（如 "icon14" → 尝试匹配 "icon"）
+    var noNumber = n.replace(/\d+$/, '');
+    if (noNumber !== n && noNumber.length >= 3) {
+      for (var i = 0; i < FULL_ICON_POOL.length; i++) {
+        if (FULL_ICON_POOL[i].name.indexOf(noNumber) >= 0) return FULL_ICON_POOL[i];
       }
     }
     return null;

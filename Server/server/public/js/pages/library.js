@@ -801,10 +801,10 @@ function extractIconsFromPages(pagesData) {
       var h = frame.height || 0;
 
       // 判断条件：
-      // 1. Symbol Master/Instance → 肯定是可复用图标/组件
-      var isSymbol = layer._class === 'symbolMaster' || layer._class === 'symbolInstance';
-      // 2. 名称含 icon/svg/图标 关键词
-      var nameHasIconHint = iconKeywords.some(function(kw) { return name.indexOf(kw) >= 0; });
+      // 1. Symbol Master 且尺寸较小（≤80px）→ 可复用图标组件
+      var isSymbol = layer._class === 'symbolMaster' && w <= 80 && h <= 80;
+      // 2. 名称含 icon/svg/图标 关键词（且名称长度合理，排除 "icon141-bg-wrapper" 类噪声）
+      var nameHasIconHint = name.length < 30 && iconKeywords.some(function(kw) { return name.indexOf(kw) >= 0; });
       // 3. 图层在命名含 icon 的 group 内
       var parentIsIconGroup = layer.do_objectID ? groupNames[layer.do_objectID] : false;
       // 4. 小尺寸形状（仅限形状类且父级已是图标组或名称含图标关键词）
@@ -1545,14 +1545,21 @@ function renderIconsTab(icons) {
       // 未匹配的图标名 → 根据名字哈希生成颜色方块缩略图
       var colors = ['#5B5EF4','#22C55E','#F59E0B','#EF4444','#A855F7','#06B6D4','#8B5CF6'];
       var ci = Math.abs(seedHash(icon.name || '')) % colors.length;
-      var swatch = '<svg width="20" height="20" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="4" fill="' + colors[ci] + '" opacity=".85"/></svg>';
+      // 取首字母或首字符作为缩略图内的标记
+      var initial = (icon.name || '?').charAt(0).toUpperCase();
+      var swatch = '<svg width="20" height="20" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="4" fill="' + colors[ci] + '" opacity=".85"/><text x="12" y="16" text-anchor="middle" font-size="11" fill="#fff" font-weight="600">' + escapeHTML(initial) + '</text></svg>';
       svg = swatch;
     }
+    // 截断过长的名称
+    var displayName = icon.name;
+    if (displayName.length > 20) displayName = displayName.slice(0, 18) + '…';
+    var displayLabel = icon.label;
+    if (displayLabel && displayLabel.length > 25) displayLabel = displayLabel.slice(0, 23) + '…';
     return '<div class="icon-card">' +
       '<div class="icon-preview">' + svg + '</div>' +
       '<div class="icon-info">' +
-        '<span class="icon-name">' + icon.name + '</span>' +
-        '<span class="icon-label">' + icon.label + '</span>' +
+        '<span class="icon-name" title="' + escapeHTML(icon.name) + '">' + escapeHTML(displayName) + '</span>' +
+        (displayLabel && displayLabel !== icon.name ? '<span class="icon-label" title="' + escapeHTML(icon.label) + '">' + escapeHTML(displayLabel) + '</span>' : '') +
       '</div>' +
     '</div>';
   }).join('');

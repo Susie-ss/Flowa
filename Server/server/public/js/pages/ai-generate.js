@@ -236,26 +236,48 @@ function buildLayout(prompt, ds) {
   };
 }
 
-// ===== AI 响应生成（完全匹配 Framo buildLayout 逻辑）=====
+// ===== AI 响应生成（调用后端 Framo API）=====
 function generateAIResponse(prompt, dsId, dsName) {
   var styleLabel = dsName ? '（风格: ' + dsName + '）' : '（无风格参考）';
-
-  // 获取设计系统
-  var ds = null;
   var dsList = window.designSystems || [];
-  for (var i = 0; i < dsList.length; i++) {
-    if (dsList[i].id === dsId) { ds = dsList[i]; break; }
+
+  // 调用后端 API /api/framo/ai/generate
+  var requestBody = JSON.stringify({
+    prompt: prompt,
+    libraryId: dsId || undefined
+  });
+
+  // 使用同步 XHR（setTimeout 中不能直接用 await）
+  var responseData = null;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/framo/ai/generate', false); // synchronous
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  try {
+    xhr.send(requestBody);
+    if (xhr.status >= 200 && xhr.status < 300) {
+      responseData = JSON.parse(xhr.responseText);
+    } else {
+      console.error('API error:', xhr.status, xhr.responseText);
+    }
+  } catch (e) {
+    console.error('API call failed:', e);
   }
 
-  // === Framo 核心：buildLayout() 生成结构化 JSON ===
-  var layoutResult = buildLayout(prompt, ds);
+  // 如果 API 调用成功，使用返回的数据
+  var layoutResult = null;
+  if (responseData && responseData.result) {
+    layoutResult = responseData.result;
+  } else {
+    // fallback: 本地 mock 生成
+    layoutResult = buildLayout(prompt, null);
+  }
 
-  // 生成预览 HTML（从结构化 JSON 渲染）
+  // 生成预览 HTML
   var previewHTML = generatePreviewHTML(prompt, dsId);
   updatePreview(previewHTML);
 
-  // 组件引用展示 HTML（匹配 Framo componentReferences）
-  var refsHTML = layoutResult.componentReferences.map(function(ref) {
+  // 组件引用展示 HTML（Framo componentReferences）
+  var refsHTML = (layoutResult.componentReferences || []).map(function(ref) {
     return '<div class="comp-ref-item"><span class="comp-ref-role">' + escapeHTML(ref.role) + '</span><strong>' + escapeHTML(ref.component) + '</strong><small>' + escapeHTML(ref.reason) + '</small></div>';
   }).join('');
 

@@ -1039,7 +1039,7 @@ function extractIconsFromPages(pagesData) {
   });
 
   // 收集符合条件的图标图层（不限数量）
-  var candidateNames = [];
+  var candidateEntries = []; // {name, layer} for symbolMasters, {name} for others
 
   pagesData.forEach(function(pageData) {
     if (!pageData || !pageData.layers) return;
@@ -1064,8 +1064,20 @@ function extractIconsFromPages(pagesData) {
       var isTextIcon = layer._class === 'text' && nameHasIconHint;
 
       if (isSymbol || nameHasIconHint || parentIsIconGroup || isSmallShape || isTextIcon) {
-        if (name && name.length > 0 && candidateNames.indexOf(name) < 0) {
-          candidateNames.push(name);
+        if (name && name.length > 0) {
+          // 检查是否已有同名条目
+          var exists = false;
+          for (var ei = 0; ei < candidateEntries.length; ei++) {
+            if (candidateEntries[ei].name === name) { exists = true; break; }
+          }
+          if (!exists) {
+            // 对 symbolMaster 保存图层引用用于提取真实 SVG
+            if (layer._class === 'symbolMaster') {
+              candidateEntries.push({ name: name, layer: layer });
+            } else {
+              candidateEntries.push({ name: name });
+            }
+          }
         }
       }
     });
@@ -1168,10 +1180,126 @@ function extractIconsFromPages(pagesData) {
     return false;
   }
 
+  // ===== Sketch 图层 → SVG 转换 =====
+  // 将 symbolMaster 中的 shape 数据转为 inline SVG
+  function sketchLayerToSVG(layer) {
+    if (!layer || !layer.layers) return '';
+    var frame = layer.frame || {};
+    var w = frame.width || 16;
+    var h = frame.height || 16;
+    var paths = [];
+    var fillColor = 'currentColor';
+
+    function parseCoord(s) {
+      // 解析 "{0.5, 0.75}" → [0.5, 0.75]
+      if (!s) return [0, 0];
+      var m = s.match(/\{(.+),\s*(.+)\}/);
+      if (m) return [parseFloat(m[1]) || 0, parseFloat(m[2]) || 0];
+      return [0, 0];
+    }
+
+    function extractShape(sub, parentFrame) {
+      var cls = sub._class;
+      var sf = sub.frame || parentFrame || {width:16, height:16};
+      var sw = sf.width || 16;
+      var sh = sf.height || 16;
+      var sx = sf.x || 0;
+      var sy = sf.y || 0;
+
+      if (cls === 'shapePath') {
+        var pts = sub.points || [];
+        if (pts.length < 2) return;
+        var d = '';
+        for (var pi = 0; pi < pts.length; pi++) {
+          var pt = pts[pi];
+          var cf = parseCoord(pt.curveFrom);
+          var ax = sx + cf[0] * sw;
+          var ay = sy + cf[1] * sh;
+          if (pi === 0) {
+            d += 'M' + ax.toFixed(2) + ' ' + ay.toFixed(2);
+          } else {
+            d += 'L' + ax.toFixed(2) + ' ' + ay.toFixed(2);
+          }
+        }
+        if (pts.length > 1) d += 'Z';
+        if (d) {
+          // 获取填充色
+          var pf = sub.style && sub.style.fills;
+          if (pf && pf.length > 0 && pf[0].isEnabled) {
+            var c = pf[0].color;
+            var r = Math.round((c.red||0)*255);
+            var g = Math.round((c.green||0)*255);
+            var b = Math.round((c.blue||0)*255);
+            var a = c.alpha !== undefined ? c.alpha : 1;
+            fillColor = a < 1 ? 'rgba('+r+','+g+','+b+','+a.toFixed(2)+')' : '#'+[r,g,b].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join('');
+          }
+          paths.push({d: d, fill: fillColor});
+        }
+      } else if (cls === 'rectangle') {
+        var rx = sub.fixedRadius || 0;
+        var r = rx > 0 ? ' rx="' + rx + '" ry="' + rx + '"' : '';
+        // 获取填充色
+        var pf = sub.style && sub.style.fills;
+        var fill = 'currentColor';
+        if (pf && pf.length > 0 && pf[0].isEnabled) {
+          var c = pf[0].color;
+          var r2 = Math.round((c.red||0)*255);
+          var g2 = Math.round((c.green||0)*255);
+          var b2 = Math.round((c.blue||0)*255);
+          var a2 = c.alpha !== undefined ? c.alpha : 1;
+          fill = a2 < 1 ? 'rgba('+r2+','+g2+','+b2+','+a2.toFixed(2)+')' : '#'+[r2,g2,b2].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join('');
+        }
+        var fx = sx, fy = sy, fw = sw, fh = sh;
+        paths.push({rect: 'x="' + fx.toFixed(1) + '" y="' + fy.toFixed(1) + '" width="' + fw.toFixed(1) + '" height="' + fh.toFixed(1) + '"' + r, fill: fill});
+      } else if (cls === 'oval') {
+        var cx = sx + sw/2;
+        var cy = sy + sh/2;
+        var rx2 = sw/2;
+        var ry2 = sh/2;
+        paths.push({ellipse: 'cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" rx="' + rx2.toFixed(1) + '" ry="' + ry2.toFixed(1) + '"', fill: 'currentColor'});
+      } else if (cls === 'shapeGroup') {
+        // 递归处理 shapeGroup 的子图层
+        if (sub.layers) {
+          for (var gi = 0; gi < sub.layers.length; gi++) {
+            extractShape(sub.layers[gi], sub.frame || parentFrame);
+          }
+        }
+      }
+    }
+
+    // 遍历 symbolMaster 的子图层
+    for (var i = 0; i < layer.layers.length; i++) {
+      extractShape(layer.layers[i], layer.frame);
+    }
+
+    if (paths.length === 0) return '';
+
+    // 构建 SVG
+    var svgParts = [];
+    for (var pi = 0; pi < paths.length; pi++) {
+      var p = paths[pi];
+      if (p.d) {
+        svgParts.push('<path d="' + p.d + '" fill="' + p.fill + '"/>');
+      } else if (p.rect) {
+        svgParts.push('<rect ' + p.rect + ' fill="' + p.fill + '"/>');
+      } else if (p.ellipse) {
+        svgParts.push('<ellipse ' + p.ellipse + ' fill="' + p.fill + '"/>');
+      }
+    }
+
+    var size = Math.max(w, h);
+    var viewW = Math.max(w, 16);
+    var viewH = Math.max(h, 16);
+    var displaySize = 20;
+    return '<svg width="' + displaySize + '" height="' + displaySize + '" viewBox="0 0 ' + viewW + ' ' + viewH + '" fill="none">' + svgParts.join('') + '</svg>';
+  }
+
   // 将候选名映射到 FULL_ICON_POOL（匹配到的保留图标，未匹配的保留原名）
   var result = [];
   var usedNames = {};
-  candidateNames.forEach(function(cn) {
+  candidateEntries.forEach(function(entry) {
+    var cn = entry.name;
+    var layerRef = entry.layer;
     // 先从路径中提取真正的图标名
     var extracted = extractIconName(cn);
     // 过滤噪声名称
@@ -1215,7 +1343,12 @@ function extractIconsFromPages(pagesData) {
     }
     if (matched && !usedNames[matched.name]) {
       usedNames[matched.name] = true;
-      result.push({ name: matched.name, label: matched.label, type: matched.type });
+      // 尝试从 symbolMaster 提取真实 SVG
+      var realSVG = '';
+      if (layerRef && layerRef._class === 'symbolMaster') {
+        realSVG = sketchLayerToSVG(layerRef);
+      }
+      result.push({ name: matched.name, label: matched.label, type: matched.type, svg: realSVG });
     }
     // 不再保留未匹配的图标（过滤掉所有未识别到 FULL_ICON_POOL 的项）
   });
@@ -1936,7 +2069,8 @@ function renderIconsTab(icons) {
   }
 
   var cardsHTML = icons.map(function(icon) {
-    var svg = iconSVGMap[icon.name] || '';
+    // 优先使用从 Sketch 提取的真实 SVG
+    var svg = icon.svg || iconSVGMap[icon.name] || '';
     // 截断过长的名称
     var displayName = icon.name;
     if (displayName.length > 20) displayName = displayName.slice(0, 18) + '…';

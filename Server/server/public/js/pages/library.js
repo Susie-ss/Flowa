@@ -1184,114 +1184,114 @@ function extractIconsFromPages(pagesData) {
   // 将 symbolMaster 中的 shape 数据转为 inline SVG
   function sketchLayerToSVG(layer) {
     if (!layer || !layer.layers) return '';
-    var frame = layer.frame || {};
-    var w = frame.width || 16;
-    var h = frame.height || 16;
+    var w = 16, h = 16;
+    if (layer.frame) { w = layer.frame.width || 16; h = layer.frame.height || 16; }
     var paths = [];
-    var fillColor = 'currentColor';
 
     function parseCoord(s) {
-      // 解析 "{0.5, 0.75}" → [0.5, 0.75]
       if (!s) return [0, 0];
       var m = s.match(/\{(.+),\s*(.+)\}/);
       if (m) return [parseFloat(m[1]) || 0, parseFloat(m[2]) || 0];
       return [0, 0];
     }
 
-    function extractShape(sub, parentFrame) {
+    function colorStr(color) {
+      if (!color) return null;
+      var r = Math.round((color.red||0)*255);
+      var g = Math.round((color.green||0)*255);
+      var b = Math.round((color.blue||0)*255);
+      var a = color.alpha !== undefined ? color.alpha : 1;
+      return a < 1 ? 'rgba('+r+','+g+','+b+','+a.toFixed(2)+')' : '#'+[r,g,b].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join('');
+    }
+
+    function getFill(sub, fallback) {
+      var src = (sub.style && sub.style.fills) || sub.fills;
+      if (src && src.length > 0 && src[0].isEnabled) {
+        var c = colorStr(src[0].color);
+        if (c) return c;
+      }
+      return fallback || 'currentColor';
+    }
+
+    function getStroke(sub) {
+      var borders = sub.style && sub.style.borders;
+      if (borders && borders.length > 0 && borders[0].isEnabled) {
+        return colorStr(borders[0].color);
+      }
+      return null;
+    }
+
+    function extractShape(sub, pf, fill) {
       var cls = sub._class;
-      var sf = sub.frame || parentFrame || {width:16, height:16};
-      var sw = sf.width || 16;
-      var sh = sf.height || 16;
-      var sx = sf.x || 0;
-      var sy = sf.y || 0;
+      var sf = sub.frame || pf || {width:16, height:16, x:0, y:0};
+      var sw = sf.width || 16, sh = sf.height || 16;
+      var sx = sf.x || 0, sy = sf.y || 0;
 
       if (cls === 'shapePath') {
         var pts = sub.points || [];
         if (pts.length < 2) return;
         var d = '';
         for (var pi = 0; pi < pts.length; pi++) {
-          var pt = pts[pi];
-          var cf = parseCoord(pt.curveFrom);
+          var cf = parseCoord(pts[pi].curveFrom);
           var ax = sx + cf[0] * sw;
           var ay = sy + cf[1] * sh;
           if (pi === 0) {
-            d += 'M' + ax.toFixed(2) + ' ' + ay.toFixed(2);
+            d += 'M' + ax.toFixed(4) + ' ' + ay.toFixed(4);
           } else {
-            d += 'L' + ax.toFixed(2) + ' ' + ay.toFixed(2);
+            // 所有点都使用直线连接（L），16x16 图标中曲线差异不可见
+            d += 'L' + ax.toFixed(4) + ' ' + ay.toFixed(4);
           }
         }
         if (pts.length > 1) d += 'Z';
         if (d) {
-          // 获取填充色
-          var pf = sub.style && sub.style.fills;
-          if (pf && pf.length > 0 && pf[0].isEnabled) {
-            var c = pf[0].color;
-            var r = Math.round((c.red||0)*255);
-            var g = Math.round((c.green||0)*255);
-            var b = Math.round((c.blue||0)*255);
-            var a = c.alpha !== undefined ? c.alpha : 1;
-            fillColor = a < 1 ? 'rgba('+r+','+g+','+b+','+a.toFixed(2)+')' : '#'+[r,g,b].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join('');
-          }
-          paths.push({d: d, fill: fillColor});
+          var fc = getFill(sub, fill);
+          var st = getStroke(sub);
+          paths.push({d: d, fill: fc, stroke: st});
         }
       } else if (cls === 'rectangle') {
         var rx = sub.fixedRadius || 0;
-        var r = rx > 0 ? ' rx="' + rx + '" ry="' + rx + '"' : '';
-        // 获取填充色
-        var pf = sub.style && sub.style.fills;
-        var fill = 'currentColor';
-        if (pf && pf.length > 0 && pf[0].isEnabled) {
-          var c = pf[0].color;
-          var r2 = Math.round((c.red||0)*255);
-          var g2 = Math.round((c.green||0)*255);
-          var b2 = Math.round((c.blue||0)*255);
-          var a2 = c.alpha !== undefined ? c.alpha : 1;
-          fill = a2 < 1 ? 'rgba('+r2+','+g2+','+b2+','+a2.toFixed(2)+')' : '#'+[r2,g2,b2].map(function(v){return ('0'+v.toString(16)).slice(-2)}).join('');
-        }
-        var fx = sx, fy = sy, fw = sw, fh = sh;
-        paths.push({rect: 'x="' + fx.toFixed(1) + '" y="' + fy.toFixed(1) + '" width="' + fw.toFixed(1) + '" height="' + fh.toFixed(1) + '"' + r, fill: fill});
+        var rad = Math.min(rx, sw/2, sh/2);
+        var fc = getFill(sub, fill);
+        var st = getStroke(sub);
+        var rectStr = 'x="' + (sx).toFixed(1) + '" y="' + (sy).toFixed(1) + '" width="' + (sw).toFixed(1) + '" height="' + (sh).toFixed(1) + '"';
+        if (rad > 0) rectStr += ' rx="' + rad + '" ry="' + rad + '"';
+        paths.push({rect: rectStr, fill: fc, stroke: st});
       } else if (cls === 'oval') {
-        var cx = sx + sw/2;
-        var cy = sy + sh/2;
-        var rx2 = sw/2;
-        var ry2 = sh/2;
-        paths.push({ellipse: 'cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" rx="' + rx2.toFixed(1) + '" ry="' + ry2.toFixed(1) + '"', fill: 'currentColor'});
+        var cx = sx + sw/2, cy = sy + sh/2;
+        var rx2 = sw/2, ry2 = sh/2;
+        var fc = getFill(sub, fill);
+        paths.push({ellipse: 'cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" rx="' + rx2.toFixed(1) + '" ry="' + ry2.toFixed(1) + '"', fill: fc});
       } else if (cls === 'shapeGroup') {
-        // 递归处理 shapeGroup 的子图层
+        var gf = getFill(sub, fill);
         if (sub.layers) {
           for (var gi = 0; gi < sub.layers.length; gi++) {
-            extractShape(sub.layers[gi], sub.frame || parentFrame);
+            extractShape(sub.layers[gi], sub.frame || pf, gf);
           }
         }
       }
     }
 
-    // 遍历 symbolMaster 的子图层
     for (var i = 0; i < layer.layers.length; i++) {
-      extractShape(layer.layers[i], layer.frame);
+      extractShape(layer.layers[i], layer.frame, 'currentColor');
     }
 
     if (paths.length === 0) return '';
 
-    // 构建 SVG
     var svgParts = [];
     for (var pi = 0; pi < paths.length; pi++) {
       var p = paths[pi];
       if (p.d) {
-        svgParts.push('<path d="' + p.d + '" fill="' + p.fill + '"/>');
+        var sa = p.stroke ? ' stroke="' + p.stroke + '" stroke-width="1"' : '';
+        svgParts.push('<path d="' + p.d + '" fill="' + p.fill + '"' + sa + '/>');
       } else if (p.rect) {
-        svgParts.push('<rect ' + p.rect + ' fill="' + p.fill + '"/>');
+        var sa = p.stroke ? ' stroke="' + p.stroke + '" stroke-width="1"' : '';
+        svgParts.push('<rect ' + p.rect + ' fill="' + p.fill + '"' + sa + '/>');
       } else if (p.ellipse) {
         svgParts.push('<ellipse ' + p.ellipse + ' fill="' + p.fill + '"/>');
       }
     }
 
-    var size = Math.max(w, h);
-    var viewW = Math.max(w, 16);
-    var viewH = Math.max(h, 16);
-    var displaySize = 20;
-    return '<svg width="' + displaySize + '" height="' + displaySize + '" viewBox="0 0 ' + viewW + ' ' + viewH + '" fill="none">' + svgParts.join('') + '</svg>';
+    return '<svg width="20" height="20" viewBox="0 0 ' + w + ' ' + h + '" fill="none">' + svgParts.join('') + '</svg>';
   }
 
   // 将候选名映射到 FULL_ICON_POOL（匹配到的保留图标，未匹配的保留原名）
@@ -1349,6 +1349,17 @@ function extractIconsFromPages(pagesData) {
         realSVG = sketchLayerToSVG(layerRef);
       }
       result.push({ name: matched.name, label: matched.label, type: matched.type, svg: realSVG });
+    } else if (!matched && layerRef && layerRef._class === 'symbolMaster') {
+      // 即使未匹配到 pool，但 symbolMaster 且有有效 SVG → 也作为图标展示
+      var realSVG = sketchLayerToSVG(layerRef);
+      if (realSVG) {
+        var displayName = extractIconName(cn) || cn.replace(/[\s\S]*\//g, '').replace(/[^a-z0-9\-]/gi, '');
+        var dedupKey = displayName || cn;
+        if (!usedNames[dedupKey]) {
+          usedNames[dedupKey] = true;
+          result.push({ name: displayName, label: cn, type: 'line', svg: realSVG });
+        }
+      }
     }
     // 不再保留未匹配的图标（过滤掉所有未识别到 FULL_ICON_POOL 的项）
   });

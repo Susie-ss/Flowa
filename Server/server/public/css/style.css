@@ -3642,3 +3642,20 @@ button {
   color: var(--text-muted); font-size: 10px;
 }
 
+/* AI 生成结构化 JSON 输出（Framo 风格） */
+.ai-gen-json-output {
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.ai-gen-json-output pre {
+  background: #1a1a2e; color: #a5d6ff;
+  padding: 12px; margin: 0;
+  font-size: 11px; line-height: 1.5;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+

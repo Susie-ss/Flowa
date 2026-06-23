@@ -103,10 +103,13 @@ function renderMessages() {
     }
     // bot message
     var extraBlock = msg.extra ? '<div class="ai-gen-msg-extra">' + msg.extra + '</div>' : '';
+    // JSON 输出（Framo 结构化布局风格）
+    var jsonBlock = msg.json ? '<div class="ai-gen-json-output"><pre>' + escapeHTML(msg.json) + '</pre></div>' : '';
     return '<div class="ai-gen-msg ai-gen-msg-bot">' +
       '<div class="ai-gen-msg-avatar"><svg viewBox="0 0 24 24" fill="#5B5EF4" width="16" height="16"><path d="M12 3l1.5 3.5L17 8l-3.5 1.5L12 13l-1.5-3.5L7 8l3.5-1.5L12 3z"/><circle cx="18" cy="18" r="3"/><path d="M18 16v4M16 18h4"/></svg></div>' +
       '<div class="ai-gen-msg-content">' +
         '<p>' + escapeHTML(msg.text) + '</p>' +
+        jsonBlock +
         extraBlock +
       '</div>' +
     '</div>';
@@ -160,50 +163,103 @@ function aiGenSendMessage() {
   }, 800 + Math.random() * 700);
 }
 
-// ===== AI 响应生成（含预览 + Framo 结构化布局 + 组件引用） =====
+// ===== Framo buildLayout（结构化布局生成，完全匹配 server.mjs）=====
+function buildLayout(prompt, ds) {
+  // normalizeTokens（匹配 Framo server.mjs normalizeTokens）
+  var rawTokens = {
+    colorPrimary: (ds && ds.colors && ds.colors.length > 0) ? ds.colors[0] : undefined,
+    colorSurface: (ds && ds.colors && ds.colors.length > 1) ? ds.colors[1] : undefined
+  };
+  var tokens = {
+    colorPrimary: rawTokens.colorPrimary || '#5B5EF4',
+    colorSurface: rawTokens.colorSurface || '#FFFFFF',
+    borderRadius: '8px',
+    fontSizeBase: 14,
+    spacingBase: 8
+  };
+
+  var compactPrompt = String(prompt || '').trim();
+  var available = (ds && ds.components) || [];
+
+  // pick() — 从组件库匹配组件名（匹配 Framo）
+  function pick(pattern) {
+    for (var pi = 0; pi < available.length; pi++) {
+      var name = available[pi].name || available[pi];
+      if (pattern.test(name)) return name;
+    }
+    return null;
+  }
+
+  // 组件引用（4 种角色）
+  var references = [
+    { role: 'page-container', component: pick(/page|layout|container|布局|容器/i) || 'container', reason: '作为页面结构容器' },
+    { role: 'summary', component: pick(/card|stat|metric|统计|卡片/i) || 'stat', reason: '承载关键指标' },
+    { role: 'content', component: pick(/table|list|列表|表格/i) || 'table', reason: '展示主要业务数据' },
+    { role: 'action', component: pick(/button|action|按钮/i) || 'button', reason: '提供主操作入口' }
+  ].filter(function(r) { return r.component; });
+
+  return {
+    type: 'page',
+    libraryId: (ds && ds.id) || '',
+    tokens: tokens,
+    prompt: compactPrompt,
+    componentReferences: references,
+    layout: [
+      {
+        type: 'container',
+        props: { title: compactPrompt.indexOf('分析') >= 0 ? '数据分析总览' : '运营总览' },
+        children: [
+          {
+            type: 'stats',
+            items: [
+              { label: '待审核任务', value: compactPrompt ? '28' : '18', delta: '+12%' },
+              { label: '在线原型', value: '16', delta: '+4%' },
+              { label: '规范命中率', value: '93%', delta: '+7%' }
+            ]
+          },
+          {
+            type: 'panel',
+            title: compactPrompt || '智能任务列表',
+            action: '新建页面',
+            table: {
+              columns: ['页面', '负责人', '状态', '更新时间'],
+              rows: [
+                ['控制台首页', 'Ava', '已生成', '2 分钟前'],
+                ['用户分析页', 'Noah', '待确认', '12 分钟前'],
+                ['策略配置页', 'Mia', '设计中', '28 分钟前']
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  };
+}
+
+// ===== AI 响应生成（完全匹配 Framo buildLayout 逻辑）=====
 function generateAIResponse(prompt, dsId, dsName) {
   var styleLabel = dsName ? '（风格: ' + dsName + '）' : '（无风格参考）';
 
-  // 获取设计系统数据
+  // 获取设计系统
   var ds = null;
   var dsList = window.designSystems || [];
   for (var i = 0; i < dsList.length; i++) {
     if (dsList[i].id === dsId) { ds = dsList[i]; break; }
   }
 
-  // 提取 tokens（Framo normalizeTokens 风格）
-  var tokens = {
-    colorPrimary: (ds && ds.colors && ds.colors.length > 0) ? ds.colors[0] : '#5B5EF4',
-    colorSecondary: (ds && ds.colors && ds.colors.length > 1) ? ds.colors[1] : '#22C55E',
-    borderRadius: '8px',
-    fontSizeBase: 14,
-    spacingBase: 8
-  };
+  // === Framo 核心：buildLayout() 生成结构化 JSON ===
+  var layoutResult = buildLayout(prompt, ds);
 
-  // 生成预览 HTML
+  // 生成预览 HTML（从结构化 JSON 渲染）
   var previewHTML = generatePreviewHTML(prompt, dsId);
   updatePreview(previewHTML);
 
-  // Framo 风格：生成结构化布局和组件引用
-  var analysis = analyzePrompt(prompt);
-  var theme = AI_THEMES[analysis.theme];
-  var topic = analysis.topic || prompt.slice(0, Math.min(10, prompt.length));
-
-  // 组件引用（Framo buildLayout → componentReferences 风格）
-  var comps = (ds && ds.components) || [];
-  var compNames = comps.slice(0, 6).map(function(c) { return c.name; });
-  var references = [
-    { role: '页面容器', component: compNames[0] || 'container', reason: '作为页面结构容器' },
-    { role: '数据摘要', component: compNames[1] || 'stat-card', reason: '承载关键指标' },
-    { role: '内容面板', component: compNames[2] || 'table', reason: '展示主要业务数据' },
-    { role: '操作入口', component: compNames[3] || 'button', reason: '提供主操作入口' }
-  ].filter(function(r) { return r.component; });
-
-  var refsHTML = references.map(function(ref) {
+  // 组件引用展示 HTML（匹配 Framo componentReferences）
+  var refsHTML = layoutResult.componentReferences.map(function(ref) {
     return '<div class="comp-ref-item"><span class="comp-ref-role">' + escapeHTML(ref.role) + '</span><strong>' + escapeHTML(ref.component) + '</strong><small>' + escapeHTML(ref.reason) + '</small></div>';
   }).join('');
 
-  // 统计生成的页面/模块数
+  // 统计生成的模块
   var sections = [];
   if (prompt.indexOf('表格') >= 0 || prompt.indexOf('数据') >= 0 || prompt.indexOf('看板') >= 0) sections.push('数据表格');
   if (prompt.indexOf('图表') >= 0 || prompt.indexOf('折线') >= 0 || prompt.indexOf('饼图') >= 0) sections.push('图表');
@@ -214,7 +270,7 @@ function generateAIResponse(prompt, dsId, dsName) {
   if (prompt.indexOf('按钮') >= 0) sections.push('按钮组');
   if (sections.length === 0) sections = ['页面布局', '组件模块'];
 
-  // 额外信息（预览导航 + 组件引用 + 结构化 JSON）
+  // 额外信息（预览导航 + 组件引用 + Token）
   var extraHTML =
     '<div class="ai-gen-preview-pages">' +
       '<span class="ai-gen-page-badge" onclick="scrollPreviewTo(\'page-header\')">页面标题</span>' +
@@ -222,16 +278,17 @@ function generateAIResponse(prompt, dsId, dsName) {
         return '<span class="ai-gen-page-badge" onclick="scrollPreviewTo(\'' + s + '\')">' + s + '</span>';
       }).join('') +
     '</div>' +
-    '<div class="ai-gen-comp-refs"><strong>引用的组件:</strong>' +
+    '<div class="ai-gen-comp-refs"><strong>引用的组件（Framo componentReferences）:</strong>' +
       '<div class="comp-refs-list">' + refsHTML + '</div>' +
     '</div>' +
     '<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">' +
-      '包含 ' + sections.length + ' 个模块 · Token: ' + tokens.colorPrimary + ' · ' + tokens.colorSecondary +
+      '包含 ' + sections.length + ' 个模块 · Token: ' + layoutResult.tokens.colorPrimary + ' / ' + layoutResult.tokens.colorSurface +
     '</div>';
 
   return {
     type: 'bot',
     text: '已根据你的描述生成了原型界面' + styleLabel + '，右侧为预览效果。',
+    json: JSON.stringify(layoutResult, null, 2),
     extra: extraHTML
   };
 }

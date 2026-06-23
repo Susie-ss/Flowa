@@ -129,7 +129,12 @@ function parseSketchDocument(document, pages) {
     if (!layers) return;
     for (var i = 0; i < layers.length; i++) {
       var layer = layers[i];
-      if (!layer || !layer._class) continue;
+      if (!layer) continue;
+      // 即使没有 _class，仍需遍历其子图层（Framo 参考实现不跳过无 _class 的图层）
+      if (!layer._class) {
+        if (layer.layers) walkLayers(layer.layers, trail);
+        continue;
+      }
       totalLayers++;
       var usage = trail.concat([layer.name]).filter(Boolean).join(' / ');
       var trailArr = trail.concat([layer.name || layer._class || 'Layer']);

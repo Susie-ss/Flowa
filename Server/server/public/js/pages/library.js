@@ -1638,44 +1638,70 @@ window.startLibraryParse = function() {
       '<span>' + escapeHTML(file.name) + '</span>';
   }
 
+  // 展示进度阶段动画
+  parseStages.forEach(function(stage, i) {
+    var delay = (i + 1) * 500;
+    setTimeout(function() {
+      updateParseStage(i);
+    }, delay);
+  });
+
   if (ext === '.sketch') {
-    // ===== 真实解析 sketch 文件 =====
-    var stageTimer = 0;
-    parseStages.forEach(function(stage, i) {
-      var delay = (i + 1) * 600;
-      setTimeout(function() {
-        updateParseStage(i);
-        if (i === parseStages.length - 1) {
-          // 触发真实解析
-          setTimeout(function() {
-            updateParseStage(i);
-            parseSketchFile(file).then(function(result) {
-              window.libParseResult = result;
-              showParseDoneResult(result);
-            }).catch(function(err) {
-              console.error('Sketch parse error:', err);
-              // 失败时回退到模拟解析
-              window.libParseResult = simulateParseResult(file.name);
-              showParseDoneResult(window.libParseResult);
-              showToast('文件解析部分失败，已使用估算数据', 'warning');
-            });
-          }, 200);
-        }
-      }, delay);
+    // ===== 调用后端 Framo API 解析 Sketch 文件 =====
+    var formData = new FormData();
+    formData.append('file', file);
+
+    // 通过 fetch 上传到后端
+    fetch('/api/framo/sketch/import', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(response) {
+      // 更新进度到完成
+      setTimeout(function() { updateParseStage(parseStages.length - 1); }, 200);
+      return response.json().then(function(data) {
+        if (!response.ok) throw new Error(data.error || '上传失败：' + response.status);
+        return data;
+      });
+    })
+    .then(function(data) {
+      var library = data.library;
+      window.libParseResult = {
+        name: library.name,
+        // 图标：用 Framo 的 assets.icons（含真实 bezier 路径 paths[]）
+        icons: (library.assets && library.assets.icons) || [],
+        // 字体
+        fonts: (library.assets && library.assets.fonts) || [],
+        // 组件：用 Framo 的 assets.components
+        components: (library.assets && library.assets.components) || [],
+        // 字号
+        sizes: (library.assets && library.assets.fontSizes) || [],
+        // 颜色：用 Framo 的 assets.colors（含 value/usages/count/chroma/luminance）
+        colors: (library.assets && library.assets.colors) || [],
+        // 共享文字/图层样式
+        textStyles: (library.assets && library.assets.textStyles) || [],
+        layerStyles: (library.assets && library.assets.layerStyles) || [],
+        // Token
+        tokens: library.tokens || {},
+        // 统计
+        stats: library.stats || {}
+      };
+      showParseDoneResult(window.libParseResult);
+    })
+    .catch(function(err) {
+      console.error('Sketch parse error:', err);
+      // 失败时回退到模拟解析
+      window.libParseResult = simulateParseResult(file.name);
+      showParseDoneResult(window.libParseResult);
+      showToast('文件解析部分失败，已使用估算数据', 'warning');
     });
   } else {
     // ===== .psd / .rp → 模拟解析回退 =====
-    parseStages.forEach(function(stage, i) {
-      setTimeout(function() {
-        updateParseStage(i);
-        if (i === parseStages.length - 1) {
-          setTimeout(function() {
-            window.libParseResult = simulateParseResult(file.name);
-            showParseDoneResult(window.libParseResult);
-          }, 500);
-        }
-      }, (i + 1) * 800);
-    });
+    setTimeout(function() {
+      updateParseStage(parseStages.length - 1);
+      window.libParseResult = simulateParseResult(file.name);
+      showParseDoneResult(window.libParseResult);
+    }, parseStages.length * 500 + 200);
   }
 };
 
@@ -1754,27 +1780,39 @@ function showParseDoneResult(result) {
   }
 }
 
-// ===== 确认创建 =====
+// ===== 确认创建（支持 Framo API 数据格式）=====
 window.confirmCreateLibrary = function() {
   if (!window.libParseResult) return;
 
   var nameInput = document.getElementById('lib-name-input');
   var libraryName = (nameInput ? nameInput.value : '') || window.libParseResult.name;
 
+  var result = window.libParseResult;
+  var icons = result.icons || [];
+  var fonts = result.fonts || [];
+  var components = result.components || [];
+  var sizes = result.sizes || [];
+  var colors = result.colors || [];
+
   var newDS = {
     id: String(Date.now()),
     name: libraryName,
-    description: '从 ' + (window.libSelectedFile ? window.libSelectedFile.name : '设计文件') + ' 解析生成的组件库，包含 ' + window.libParseResult.icons.length + ' 图标、' + window.libParseResult.fonts.length + ' 字体、' + window.libParseResult.components.length + ' 组件',
-    componentCount: window.libParseResult.components.length,
-    colorCount: window.libParseResult.colors.length,
+    description: '从 ' + (window.libSelectedFile ? window.libSelectedFile.name : '设计文件') + ' 解析生成的组件库，包含 ' + icons.length + ' 图标、' + fonts.length + ' 字体、' + components.length + ' 组件',
+    componentCount: components.length,
+    colorCount: colors.length,
     createdAt: new Date().toISOString().split('T')[0],
-    colors: window.libParseResult.colors.slice(),
+    // 颜色：支持 Framo 格式 {value, usages, count, chroma, luminance} 和纯 hex 字符串
+    colors: colors.slice(),
     source: window.libSelectedFile ? window.libSelectedFile.name : null,
-    // 存储完整的解析数据，详情页使用这些数据渲染
-    icons: window.libParseResult.icons.slice(),
-    fonts: window.libParseResult.fonts.slice(),
-    components: window.libParseResult.components.slice(),
-    sizes: window.libParseResult.sizes.slice()
+    // === Framo 数据格式（含真实 bezier 路径）===
+    icons: icons.slice(),        // {name, paths[], color, width, height, priority}
+    fonts: fonts.slice(),        // {family, weights[], sizes[], count, sample}
+    components: components.slice(), // {name, fullName, category, variantCount, preview{c}}
+    sizes: sizes.slice(),        // {size, count, samples[]}
+    textStyles: (result.textStyles || []).slice(), // {name, family, size, color}
+    layerStyles: (result.layerStyles || []).slice(), // {name, color, radius}
+    tokens: result.tokens || {}, // {colorPrimary, colorSurface, borderRadius, ...}
+    stats: result.stats || {}     // {pages, layers, colors, fonts, icons, components}
   };
 
   // 添加到列表头部
@@ -1947,24 +1985,41 @@ var DEFAULT_SIZES = [
 ];
 
 // 获取当前DS的数据，fallback 到默认值
-function getDSIcons()   { return (currentDS && currentDS.icons && currentDS.icons.length > 0) ? currentDS.icons : []; }
+// 支持 Framo 格式: icons 有 {paths[], name, color, width, height}
+function getDSIcons() {
+  if (currentDS && currentDS.icons && currentDS.icons.length > 0) return currentDS.icons;
+  return [];
+}
 function getDSFonts()   { return (currentDS && currentDS.fonts && currentDS.fonts.length > 0) ? currentDS.fonts : DEFAULT_FONTS; }
 function getDSComponents() { return (currentDS && currentDS.components && currentDS.components.length > 0) ? currentDS.components : DEFAULT_COMPONENTS; }
 function getDSSizes()  { return (currentDS && currentDS.sizes && currentDS.sizes.length > 0) ? currentDS.sizes : DEFAULT_SIZES; }
 function getDSColors() { return (currentDS && currentDS.colors && currentDS.colors.length > 0) ? currentDS.colors : []; }
+function getDSTextStyles() { return (currentDS && currentDS.textStyles) || []; }
+function getDSLayerStyles() { return (currentDS && currentDS.layerStyles) || []; }
 function getDSTokens() {
-  // 从当前设计系统提取标准 token
+  // 优先使用 Framo 的 tokens
+  if (currentDS && currentDS.tokens) return currentDS.tokens;
+  // fallback：从颜色列表提取
   var colors = getDSColors();
   return {
-    colorPrimary: colors.length > 0 ? colors[0] : '#5B5EF4',
-    colorSecondary: colors.length > 1 ? colors[1] : '#22C55E',
+    colorPrimary: (colors.length > 0 && typeof colors[0] === 'string') ? colors[0] : (colors.length > 0 ? colors[0].value : '#5B5EF4'),
     colorSurface: '#FFFFFF',
-    borderRadius: (currentDS && currentDS.borderRadius) || '8px',
+    borderRadius: '8px',
     fontSizeBase: 14,
     spacingBase: 8
   };
 }
 function getDSStats() {
+  // 优先使用 Framo 的 stats
+  if (currentDS && currentDS.stats) {
+    return {
+      icons: currentDS.stats.icons || (currentDS.icons ? currentDS.icons.length : 0),
+      fonts: currentDS.stats.fonts || (currentDS.fonts ? currentDS.fonts.length : 0),
+      components: currentDS.stats.components || (currentDS.components ? currentDS.components.length : 0),
+      colors: currentDS.stats.colors || (currentDS.colors ? currentDS.colors.length : 0),
+      sizes: currentDS.stats.fontSizes || (currentDS.sizes ? currentDS.sizes.length : 0)
+    };
+  }
   return {
     icons: (currentDS && currentDS.icons) ? currentDS.icons.length : 0,
     fonts: (currentDS && currentDS.fonts) ? currentDS.fonts.length : 0,
@@ -2034,13 +2089,14 @@ function renderDetailHTML(ds) {
     return matchSearch && matchFilter;
   });
 
-  // 构建 tab 按钮（Framo 风格 + 新增 Token/Colors 和 Stats）
+  // 构建 tab 按钮（Framo 风格 + 共享样式）
   var tabs = [
     { key: 'icons', label: '图标' },
     { key: 'fonts', label: '字体' },
-    { key: 'components', label: '组件' },
     { key: 'sizes', label: '字号' },
+    { key: 'components', label: '组件' },
     { key: 'colors', label: '颜色' },
+    { key: 'styles', label: '共享样式' },
     { key: 'tokens', label: 'Token' }
   ];
 
@@ -2051,12 +2107,13 @@ function renderDetailHTML(ds) {
 
   // 统计信息（Framo asset-stats 风格）
   var stats = getDSStats();
+  var styleCount = (getDSTextStyles().length + getDSLayerStyles().length) || 0;
   var statsHTML = '<div class="ds-stats">' +
-    '<span><strong>' + stats.components + '</strong> 组件</span>' +
-    '<span><strong>' + stats.icons + '</strong> 图标</span>' +
-    '<span><strong>' + stats.fonts + '</strong> 字体</span>' +
-    '<span><strong>' + stats.colors + '</strong> 颜色</span>' +
-    '<span><strong>' + stats.sizes + '</strong> 字号</span>' +
+    '<span><strong>' + (stats.components || 0) + '</strong> 组件</span>' +
+    '<span><strong>' + (stats.icons || 0) + '</strong> 图标</span>' +
+    '<span><strong>' + (stats.fonts || 0) + '</strong> 字体</span>' +
+    '<span><strong>' + (stats.colors || 0) + '</strong> 颜色</span>' +
+    '<span><strong>' + styleCount + '</strong> 共享样式</span>' +
   '</div>';
 
   // 根据当前 tab 构建内容
@@ -2071,6 +2128,8 @@ function renderDetailHTML(ds) {
     contentHTML = renderSizesTab();
   } else if (currentDSTab === 'colors') {
     contentHTML = renderColorsTab();
+  } else if (currentDSTab === 'styles') {
+    contentHTML = renderStylesTab();
   } else if (currentDSTab === 'tokens') {
     contentHTML = renderTokensTab();
   }
@@ -2121,8 +2180,18 @@ function renderIconsTab(icons) {
   }
 
   var cardsHTML = icons.map(function(icon) {
-    // 优先使用从 Sketch 提取的真实 SVG
-    var svg = icon.svg || iconSVGMap[icon.name] || '';
+    // ===== 优先使用 Framo 格式（paths[] 真实 bezier 路径） =====
+    var svg = '';
+    if (icon.paths && icon.paths.length > 0) {
+      var c = icon.color || '#333';
+      var w = icon.width || 24;
+      var h = icon.height || 24;
+      var pts = icon.paths.map(function(p) { return '<path d="' + escapeHTML(p) + '" fill="' + c + '" fill-rule="evenodd" clip-rule="evenodd" stroke="none"/>'; }).join('');
+      svg = '<svg width="20" height="20" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' + pts + '</svg>';
+    } else {
+      // 旧格式：使用 iconSVGMap 或 inline SVG
+      svg = icon.svg || iconSVGMap[icon.name] || '';
+    }
     // 截断过长的名称
     var displayName = icon.name;
     if (displayName.length > 20) displayName = displayName.slice(0, 18) + '…';
@@ -2157,17 +2226,30 @@ function renderIconsTab(icons) {
 function renderFontsTab() {
   var fonts = getDSFonts();  // ★ 从当前 DS 取字体数据
   var listHTML = fonts.map(function(font) {
-    var weightTags = font.weights.map(function(w) {
-      return '<span class="font-weight-tag">' + w + '</span>';
+    // 支持 Framo 格式（使用 family 作为显示名）和旧格式（使用 name）
+    var displayName = font.family || font.name || 'Unknown';
+    var familyStr = font.family || displayName;
+    var displaySample = font.sample || 'Aa 字体预览';
+    // 字重视图：Framo 格式的 weights 是数字数组 [400,500,700]
+    var weightTags = (font.weights || []).map(function(w) {
+      var label = (typeof w === 'number') ? 'Weight ' + w : w;
+      return '<span class="font-weight-tag">' + label + '</span>';
     }).join('');
+
+    var sizeInfo = '';
+    if (font.sizes && font.sizes.length > 0) {
+      sizeInfo = '<div class="font-meta"><span class="meta-label">字号：</span><span>' + font.sizes.slice(0, 5).join(', ') + (font.sizes.length > 5 ? '…' : '') + '</span></div>';
+    }
+
     return '<div class="font-card">' +
       '<div class="font-header">' +
-        '<h4>' + font.name + '</h4>' +
-        '<span class="font-category">' + font.category + '</span>' +
+        '<h4>' + escapeHTML(displayName) + '</h4>' +
+        '<span class="font-category">' + escapeHTML(font.category || '字体') + '</span>' +
       '</div>' +
-      '<div class="font-sample" style="font-family:' + font.family + '">' + font.sample + '</div>' +
+      '<div class="font-sample" style="font-family:\'' + escapeHTML(familyStr) + '\', sans-serif">' + escapeHTML(displaySample.slice(0, 30)) + '</div>' +
       '<div class="font-meta"><span class="meta-label">字重：</span>' + weightTags + '</div>' +
-      '<div class="font-meta"><span class="meta-label">CSS：</span><code class="font-code">font-family: \'' + font.name + '\', ' + font.family + '</code></div>' +
+      sizeInfo +
+      (font.count ? '<div class="font-meta"><span class="meta-label">使用：</span><span>' + font.count + ' 次</span></div>' : '') +
     '</div>';
   }).join('');
 
@@ -2243,6 +2325,28 @@ function renderComponentsTab() {
   }
 
   var gridHTML = components.map(function(comp) {
+    // ===== 检测 Framo 格式（有 fullName/category/variantCount）=====
+    var isFramo = comp.fullName || comp.variantCount !== undefined;
+    
+    if (isFramo) {
+      // Framo 格式：只展示名称和分类信息
+      var displayName = comp.name || comp.fullName || '';
+      if (displayName.indexOf('/') >= 0) displayName = displayName.split('/').pop();
+      var cat = comp.category || '';
+      var previewColor = (comp.preview && comp.preview.color) ? comp.preview.color : '#5B5EF4';
+      return '<div class="component-card">' +
+        '<div class="comp-header"><h4>' + escapeHTML(displayName) + '</h4><span class="comp-category">' + escapeHTML(cat) + '</span></div>' +
+        '<div class="comp-preview" style="height:72px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,' + escapeHTML(previewColor) + '22,' + escapeHTML(previewColor) + '11);border:1px solid ' + escapeHTML(previewColor) + '33;border-radius:8px">' +
+          '<div style="padding:10px 20px;background:' + escapeHTML(previewColor) + ';color:#fff;border-radius:6px;font-size:13px;font-weight:500">' + escapeHTML(displayName) + '</div>' +
+        '</div>' +
+        '<div style="padding:8px 12px;font-size:12px;color:var(--text-muted);display:flex;gap:8px;justify-content:space-between">' +
+          '<span>' + escapeHTML(comp.fullName || comp.name || '') + '</span>' +
+          '<span>' + (comp.variantCount || 1) + ' 个变体</span>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // ===== 旧格式（mock 数据）=====
     var previewStyle = getPreviewStyle(comp.type);
     var previewTag;
     if (previewStyle) {
@@ -2287,6 +2391,20 @@ function renderSizesTab() {
     return sizeB - sizeA;
   });
   var rowsHTML = sizes.map(function(fs) {
+    // 支持 Framo 格式：{size, count, samples[]}
+    if (fs.samples !== undefined || fs.count !== undefined) {
+      var px = fs.size || 0;
+      var sample = (fs.samples && fs.samples.length > 0) ? fs.samples[0] : 'Aa';
+      return '<tr>' +
+        '<td><div class="size-preview" style="font-size:' + Math.min(px, 40) + 'px">' + escapeHTML(sample) + '</div></td>' +
+        '<td><code>' + px + 'px</code></td>' +
+        '<td>' + px + 'px</td>' +
+        '<td>' + Math.round(px * 1.4) + 'px</td>' +
+        '<td>400</td>' +
+        '<td><span class="size-usage">使用 ' + (fs.count || 0) + ' 次</span></td>' +
+      '</tr>';
+    }
+    // 旧格式
     return '<tr>' +
       '<td><div class="size-preview" style="font-size:' + fs.size + ';line-height:' + fs.lineHeight + ';font-weight:' + fs.weight + '">' + fs.name + '</div></td>' +
       '<td><code>' + fs.tag + '</code></td>' +
@@ -2311,9 +2429,16 @@ function renderColorsTab() {
   if (!colors || colors.length === 0) {
     return '<section class="ds-section"><div class="ds-section-header"><h3>颜色</h3><span class="ds-count">0 个颜色</span></div><div class="empty-state"><p>该组件库没有颜色数据</p></div></section>';
   }
-  var cardsHTML = colors.map(function(hex, i) {
+  var cardsHTML = colors.map(function(item, i) {
+    // ===== 支持 Framo 格式：{value, usages[], count, chroma, luminance} =====
+    var hex = (typeof item === 'string') ? item : item.value;
+    var usageText = '';
+    if (typeof item === 'object' && item.usages && item.usages.length > 0) {
+      usageText = item.usages[0];
+    }
+    var count = (typeof item === 'object' && item.count) ? item.count : 0;
+
     var rgb = '';
-    // 尝试解析 hex → rgb
     var simpleHex = hex.replace('#', '');
     if (simpleHex.length === 6) {
       var r = parseInt(simpleHex.slice(0,2), 16);
@@ -2328,7 +2453,7 @@ function renderColorsTab() {
       isLight = lum > 180;
     }
     var role = i === 0 ? 'Primary' : i === 1 ? 'Secondary' : i === 2 ? 'Accent' : i <= 4 ? 'Semantic' : 'Extended';
-    var usage = i === 0 ? '主色/品牌色' : i === 1 ? '辅助色/成功' : i === 2 ? '强调色/警告' : i <= 4 ? '状态色/错误' : '';
+    var usage = usageText || (i === 0 ? '主色/品牌色' : i === 1 ? '辅助色/成功' : i === 2 ? '强调色/警告' : i <= 4 ? '状态色/错误' : '');
     return '<div class="color-card">' +
       '<div class="color-swatch-large" style="background:' + hex + ';' + (isLight ? 'border:1px solid #e8eaef' : '') + '">' +
         '<span class="color-hex" style="color:' + (isLight ? '#333' : '#fff') + '">' + escapeHTML(hex) + '</span>' +
@@ -2337,6 +2462,7 @@ function renderColorsTab() {
         '<span class="color-role">' + escapeHTML(role) + '</span>' +
         (rgb ? '<span class="color-rgb">RGB ' + rgb + '</span>' : '') +
         (usage ? '<span class="color-usage">' + escapeHTML(usage) + '</span>' : '') +
+        (count > 0 ? '<span class="color-usage">使用 ' + count + ' 次</span>' : '') +
       '</div>' +
     '</div>';
   }).join('');
@@ -2367,6 +2493,38 @@ function renderTokensTab() {
       '<div class="tokens-list">' + tokenHTML + '</div>' +
       '<pre class="tokens-json">' + escapeHTML(JSON.stringify(tokens, null, 2)) + '</pre>' +
     '</div>' +
+  '</section>';
+}
+
+// ===== 共享样式 Tab（Framo 风格：文字样式 + 图层样式）=====
+function renderStylesTab() {
+  var textStyles = getDSTextStyles();
+  var layerStyles = getDSLayerStyles();
+
+  if (textStyles.length === 0 && layerStyles.length === 0) {
+    return '<section class="ds-section"><div class="ds-section-header"><h3>共享样式</h3><span class="ds-count">0 个样式</span></div><div class="empty-state"><p>该组件库没有共享样式数据</p></div></section>';
+  }
+
+  var cardsHTML = [];
+  textStyles.forEach(function(ts) {
+    cardsHTML.push('<div class="component-card">' +
+      '<div class="comp-header"><h4>' + escapeHTML(ts.name || 'Text Style') + '</h4><span class="comp-category" style="background:#5B5EF422;color:#5B5EF4">文字</span></div>' +
+      '<div class="comp-preview" style="text-align:center;padding:16px;font-family:' + escapeHTML(ts.family || 'sans-serif') + ';font-size:' + (ts.size || 14) + 'px;color:' + escapeHTML(ts.color || '#333') + '">Aa 字体预览</div>' +
+      '<div style="padding:8px 12px;font-size:12px;color:var(--text-muted)">' + escapeHTML(ts.family || 'System') + ' · ' + (ts.size || 14) + 'px · ' + escapeHTML(ts.color || '') + '</div>' +
+    '</div>');
+  });
+  layerStyles.forEach(function(ls) {
+    var bg = ls.color || '#eee';
+    cardsHTML.push('<div class="component-card">' +
+      '<div class="comp-header"><h4>' + escapeHTML(ls.name || 'Layer Style') + '</h4><span class="comp-category" style="background:#23463F22;color:#23463F">图层</span></div>' +
+      '<div class="comp-preview" style="height:60px;background:' + escapeHTML(bg) + ';border-radius:' + (ls.radius || 0) + 'px;border:1px solid rgba(0,0,0,0.07)"></div>' +
+      '<div style="padding:8px 12px;font-size:12px;color:var(--text-muted)">' + escapeHTML(bg) + (ls.radius ? ' · radius ' + ls.radius + 'px' : '') + '</div>' +
+    '</div>');
+  });
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header"><h3>共享样式</h3><span class="ds-count">' + (textStyles.length + layerStyles.length) + ' 个样式</span></div>' +
+    '<div class="components-grid">' + cardsHTML.join('') + '</div>' +
   '</section>';
 }
 
@@ -2408,6 +2566,8 @@ function bindDetailEvents() {
           contentEl.innerHTML = renderSizesTab();
         } else if (currentDSTab === 'colors') {
           contentEl.innerHTML = renderColorsTab();
+        } else if (currentDSTab === 'styles') {
+          contentEl.innerHTML = renderStylesTab();
         } else if (currentDSTab === 'tokens') {
           contentEl.innerHTML = renderTokensTab();
         }

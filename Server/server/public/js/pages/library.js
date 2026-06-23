@@ -1271,14 +1271,62 @@ function extractComponentsFromPages(pagesData) {
   var COMP_KEYWORDS = ['button','btn','input','card','modal','dialog','table','form','nav','tab','list','item','badge','tag','header','footer','sidebar','menu','dropdown','picker','slider','switch','checkbox','radio','progress','spinner','alert','toast','tooltip','popover','upload','avatar'];
   // 中文组件类别关键词（用于检测左侧导航类文本/图层）
   var ZH_COMP_KEYWORDS = ['按钮','表单','导航','容器','展示','反馈','数据','布局','输入','选择','开关','滑块','头像','标签','分页','步骤','进度','提示','弹窗','抽屉','卡片','表格','列表','菜单','下拉'];
+  // 中文组件类别映射（带类别前缀的 artboard 名 → 组件名称和分类）
+  var ZH_CAT_MAP = {
+    '通用':'通用','按钮':'按钮','表单':'表单','导航':'导航','布局':'布局','数据展示':'数据','数据录入':'表单',
+    '反馈':'反馈','其他':'其他','数据':'数据','介绍':'展示','基础':'基础'
+  };
+  var ZH_CAT_CATEGORY = {
+    '通用':'通用','按钮':'按钮','表单':'表单','导航':'导航','布局':'布局','数据展示':'数据','数据录入':'表单',
+    '反馈':'反馈','其他':'其他','数据':'数据','介绍':'展示','基础':'基础'
+  };
 
   pagesData.forEach(function(pageData) {
     if (!pageData || !pageData.layers) return;
+
+    var pageName = (pageData.name || '').trim();
+
+    // === 策略0：检测 artboard 级组件（组件展示页面的主力） ===
+    // 每个 artboard 代表一个组件展示区域，其名称就是组件名
+    pageData.layers.forEach(function(layer) {
+      if (layer._class !== 'artboard') return;
+      var artName = (layer.name || '').trim();
+      if (!artName || artName.length <= 1) return;
+
+      // 从 artboard 名提取 类别/组件名（如 "通用/按钮"、"数据录入/日期选择"）
+      var parts = artName.split(/[\/／\s]/).filter(Boolean);
+      var compName = artName;
+      var compCat = '组件';
+
+      if (parts.length >= 2) {
+        // 尝试第一部分作为类别（如 "通用/按钮" → 类别="通用", 名称="按钮"）
+        var firstPart = parts[0];
+        if (ZH_CAT_MAP[firstPart]) {
+          compCat = ZH_CAT_MAP[firstPart];
+          compName = parts.slice(1).join('/');
+        }
+      }
+
+      // 检测是否匹配已知组件关键词
+      var artLower = artName.toLowerCase();
+      for (var k = 0; k < COMP_KEYWORDS.length; k++) {
+        var kw = COMP_KEYWORDS[k];
+        if (artLower.indexOf(kw) >= 0) {
+          var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',header:'布局',footer:'布局',sidebar:'布局',menu:'导航',dropdown:'表单',slider:'表单',switch:'表单',checkbox:'表单',radio:'表单',progress:'反馈',spinner:'反馈',alert:'反馈',toast:'反馈',tooltip:'反馈',popover:'反馈',upload:'表单',avatar:'展示'};
+          compCat = catMap[kw] || compCat;
+          break;
+        }
+      }
+
+      if (!compMap[artName]) {
+        compMap[artName] = { name: compName, category: compCat, type: 'artboard', props: artName, css: '' };
+      }
+    });
+
+    // === 策略1：检测 symbolInstance/symbolMaster（原有逻辑） ===
     walkLayers(pageData.layers, function(layer) {
       var name = (layer.name || '').trim();
       var nameLower = name.toLowerCase();
-
-      // === 策略1：检测 symbolInstance/symbolMaster（原有逻辑） ===
       if (layer._class === 'symbolInstance' || layer._class === 'symbolMaster') {
         // 过滤掉明显的图标/装饰类 symbol（名称为单字符、纯数字、含 "icon/" 路径）
         if (name.length <= 1 || /^\d+$/.test(nameLower) || nameLower.indexOf('icon/') >= 0) return;

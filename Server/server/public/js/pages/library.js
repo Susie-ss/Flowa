@@ -637,6 +637,175 @@ var FULL_ICON_POOL = [
   { name: 'caret-left', label: '左插入符', type: 'line' },
   { name: 'caret-right', label: '右插入符', type: 'line' },
   { name: 'hourglass', label: '沙漏', type: 'line' },
+  // Worktile/PingCode 专用图标扩展（来自 Sketch 文件）
+  { name: 'ticket', label: '工单', type: 'line' },
+  { name: 'backtop', label: '回到顶部', type: 'line' },
+  { name: 'access', label: '访问权限', type: 'line' },
+  { name: 'access-fill', label: '访问权限(面)', type: 'solid' },
+  { name: 'exchange', label: '交换', type: 'line' },
+  { name: 'disconnect', label: '断开连接', type: 'line' },
+  { name: 'designated', label: '指派', type: 'line' },
+  { name: 'reverse-selection', label: '反选', type: 'line' },
+  { name: 'plus-circle', label: '加号圆', type: 'line' },
+  { name: 'minus-square', label: '减号方', type: 'line' },
+  { name: 'plus-square', label: '加号方', type: 'line' },
+  { name: 'user-add', label: '添加用户', type: 'line' },
+  { name: 'pushpin', label: '图钉', type: 'line' },
+  { name: 'pushpin-slash', label: '取消图钉', type: 'line' },
+  { name: 'rename', label: '重命名', type: 'line' },
+  { name: 'favorite', label: '收藏', type: 'line' },
+  { name: 'recyclebin', label: '回收站', type: 'line' },
+  { name: 'mind-map', label: '思维导图', type: 'line' },
+  { name: 'note-edit', label: '笔记编辑', type: 'line' },
+  { name: 'cascade', label: '级联', type: 'line' },
+  { name: 'publish', label: '发布', type: 'line' },
+  { name: 'upgrade', label: '升级', type: 'line' },
+  { name: 'library', label: '库', type: 'line' },
+  { name: 'description', label: '描述', type: 'line' },
+  { name: 'expand-arrows', label: '展开箭头', type: 'line' },
+  { name: 'arrow-right-left', label: '左右箭头', type: 'line' },
+  { name: 'bell-waiting', label: '通知待处理', type: 'line' },
+  { name: 'task-board', label: '任务看板', type: 'line' },
+  { name: 'children', label: '子节点', type: 'line' },
+  { name: 'view-filter', label: '视图筛选', type: 'line' },
+  { name: 'magic', label: '魔法', type: 'line' },
+  { name: 'insert-below', label: '下方插入', type: 'line' },
+  { name: 'wrench', label: '扳手', type: 'line' },
+  { name: 'house-square', label: '房子方', type: 'line' },
+  { name: 'share-remove', label: '取消分享', type: 'line' },
+  { name: 'code-injection', label: '代码注入', type: 'line' },
+  { name: 'comment-add', label: '添加评论', type: 'line' },
+  { name: 'flow', label: '自动化流程', type: 'line' },
+  { name: 'goals', label: '目标', type: 'line' },
+  { name: 'ship', label: '产品发布', type: 'line' },
+  { name: 'alarm-clock', label: '闹钟', type: 'line' },
+  { name: 'application', label: '应用', type: 'line' },
+  { name: 'application-add', label: '添加应用', type: 'line' },
+  { name: 'applications', label: '应用列表', type: 'line' },
+  { name: 'board', label: '看板', type: 'line' },
+  { name: 'applet', label: '小程序', type: 'line' },
+  { name: 'artifact', label: '制品', type: 'line' },
+  { name: 'browser', label: '浏览器', type: 'line' },
+  { name: 'computer', label: '电脑', type: 'line' },
+  { name: 'contacts', label: '联系人', type: 'line' },
+  { name: 'column', label: '列', type: 'line' },
+  { name: 'formula', label: '公式', type: 'line' },
+  { name: 'check-circle', label: '勾选圆', type: 'line' },
+  { name: 'close-circle', label: '关闭圆', type: 'line' },
+  { name: 'info-circle', label: '信息圆', type: 'line' },
+  { name: 'arrow-down-circle', label: '下箭头圆', type: 'line' },
+  { name: 'arrow-right-circle', label: '右箭头圆', type: 'line' },
+  { name: 'angle-double-left', label: '双左角度', type: 'line' },
+  { name: 'angle-double-right', label: '双右角度', type: 'line' },
+  { name: 'angle-double-up', label: '双上角度', type: 'line' },
+  { name: 'angle-double-down', label: '双下角度', type: 'line' },
+  { name: 'caret-right-down', label: '右下插入符', type: 'line' },
+  { name: 'arrow-right-up-square', label: '右上箭头方', type: 'line' },
+  { name: 'arrow-right-down-square', label: '右下箭头方', type: 'line' },
+  { name: 'arrow-right-up-circle', label: '右上箭头圆', type: 'line' },
+  { name: 'click-tap', label: '点击', type: 'line' },
+  { name: 'align-bottom', label: '底部对齐', type: 'line' },
+  { name: 'align-middle', label: '中间对齐', type: 'line' },
+  { name: 'align-top', label: '顶部对齐', type: 'line' },
+  { name: 'audit', label: '审计', type: 'line' },
+  { name: 'analytical-line', label: '分析线', type: 'line' },
+  { name: 'axis-settings', label: '轴设置', type: 'line' },
+  { name: 'arrow-symbol', label: '箭头符号', type: 'line' },
+  { name: 'clock-circle', label: '时钟圆', type: 'line' },
+  { name: 'above', label: '以上', type: 'line' },
+  { name: 'below', label: '以下', type: 'line' },
+  { name: 'baseline', label: '基线', type: 'line' },
+  { name: 'auto-fill', label: '自动填充', type: 'line' },
+  { name: 'smile-plus', label: '微笑加', type: 'line' },
+  { name: 'file-more', label: '更多文件', type: 'line' },
+  { name: 'move-to-list', label: '移至列表', type: 'line' },
+  { name: 'move-out-list', label: '移出列表', type: 'line' },
+  { name: 'more-vertical', label: '更多(竖点)', type: 'line' },
+  { name: 'more-horizontal', label: '更多(横点)', type: 'line' },
+  { name: 'notification', label: '通知', type: 'line' },
+  { name: 'notification-off', label: '通知关闭', type: 'line' },
+  { name: 'image-text', label: '图文', type: 'line' },
+  { name: 'underline-pushpin', label: '下划线图钉', type: 'line' },
+  { name: 'operation-record', label: '操作记录', type: 'line' },
+  { name: 'implement', label: '实施', type: 'line' },
+  { name: 'arithmetic', label: '算术', type: 'line' },
+  { name: 'expand-text-field', label: '展开输入框', type: 'line' },
+  { name: 'compress-arrows', label: '压缩箭头', type: 'line' },
+  { name: 'plus-circle-thin', label: '加号圆(细)', type: 'line' },
+  { name: 'drag-arrow', label: '拖拽箭头', type: 'line' },
+  { name: 'sociality', label: '社交', type: 'line' },
+  { name: 'recycle-bin', label: '回收站', type: 'line' },
+  { name: 'set-trial', label: '试用设置', type: 'line' },
+  { name: 'se-resize', label: '右下缩放', type: 'line' },
+  { name: 'min-view', label: '最小视图', type: 'line' },
+  { name: 'calendar-double-arrow', label: '日历双箭头', type: 'line' },
+  { name: 'clock-point', label: '时钟点', type: 'line' },
+  { name: 'house-square-fill', label: '房子方(面)', type: 'solid' },
+  { name: 'building-square', label: '建筑方', type: 'line' },
+  { name: 'briefcase-fill', label: '公文包(面)', type: 'solid' },
+  { name: 'bell-square', label: '通知方', type: 'line' },
+  { name: 'comment-square', label: '评论方', type: 'line' },
+  { name: 'computer-square', label: '电脑方', type: 'line' },
+  { name: 'contacts-fill', label: '联系人(面)', type: 'solid' },
+  { name: 'file-image-fill', label: '图片文件(面)', type: 'solid' },
+  { name: 'file-video-fill', label: '视频文件(面)', type: 'solid' },
+  { name: 'building-fill', label: '建筑(面)', type: 'solid' },
+  { name: 'cloud-upload', label: '云上传', type: 'line' },
+  { name: 'box', label: '盒子', type: 'line' },
+  { name: 'calendar-custom', label: '日历自定义', type: 'line' },
+  { name: 'check-circle-custom', label: '勾选圆自定义', type: 'line' },
+  { name: 'formula-custom', label: '公式自定义', type: 'line' },
+  { name: 'hashtag-custom', label: '标签自定义', type: 'line' },
+  { name: 'tasks-custom', label: '任务自定义', type: 'line' },
+  { name: 'user-custom', label: '用户自定义', type: 'line' },
+  { name: 'multiline-custom', label: '多行自定义', type: 'line' },
+  { name: 'connect', label: '连接', type: 'line' },
+  { name: 'microphones', label: '麦克风组', type: 'line' },
+  { name: 'summarize', label: '汇总', type: 'line' },
+  { name: 'text-optimization', label: '文本优化', type: 'line' },
+  { name: 'text-checking', label: '文本校验', type: 'line' },
+  { name: 'replace-selection', label: '替换选中', type: 'line' },
+  { name: 'background', label: '背景', type: 'line' },
+  { name: 'baseline-fill', label: '基线(面)', type: 'solid' },
+  { name: 'authorship', label: '作者', type: 'line' },
+  { name: 'add-element', label: '添加元素', type: 'line' },
+  { name: 'basketball', label: '篮球', type: 'line' },
+  { name: 'app-insight-fill', label: '洞察应用(面)', type: 'solid' },
+  { name: 'app-project-fill', label: '项目应用(面)', type: 'solid' },
+  { name: 'app-tracking-fill', label: '追踪应用(面)', type: 'solid' },
+  { name: 'agile-square-fill', label: '敏捷方(面)', type: 'solid' },
+  { name: 'airplane-fill', label: '飞机(面)', type: 'solid' },
+  { name: 'android-fill', label: 'Android(面)', type: 'solid' },
+  { name: 'apple-fill', label: 'Apple(面)', type: 'solid' },
+  { name: 'alarm-clock-fill', label: '闹钟(面)', type: 'solid' },
+  { name: 'dashboard-fill', label: '仪表盘(面)', type: 'solid' },
+  { name: 'project-fill', label: '项目(面)', type: 'solid' },
+  { name: 'testhub-fill', label: '测试库(面)', type: 'solid' },
+  { name: 'insight-fill', label: '洞察(面)', type: 'solid' },
+  { name: 'goals-fill', label: '目标(面)', type: 'solid' },
+  { name: 'flow-fill', label: '流程(面)', type: 'solid' },
+  { name: 'checkbox-fill', label: '复选框(面)', type: 'solid' },
+  { name: 'radio-fill', label: '单选框(面)', type: 'solid' },
+  { name: 'switch-fill', label: '开关(面)', type: 'solid' },
+  { name: 'organization-fill', label: '组织(面)', type: 'solid' },
+  { name: 'team-fill', label: '团队(面)', type: 'solid' },
+  { name: 'app-calendar-fill', label: '日历应用(面)', type: 'solid' },
+  { name: 'app-message-fill', label: '消息应用(面)', type: 'solid' },
+  { name: 'app-crm-fill', label: 'CRM应用(面)', type: 'solid' },
+  { name: 'app-okr-fill', label: 'OKR应用(面)', type: 'solid' },
+  { name: 'app-approval-fill', label: '审批应用(面)', type: 'solid' },
+  { name: 'app-agile-fill', label: '敏捷应用(面)', type: 'solid' },
+  { name: 'app-pipeline-fill', label: '管道应用(面)', type: 'solid' },
+  { name: 'app-portal-fill', label: '门户应用(面)', type: 'solid' },
+  { name: 'app-drive-fill', label: '云盘应用(面)', type: 'solid' },
+  { name: 'app-bulletin-fill', label: '公告应用(面)', type: 'solid' },
+  { name: 'app-leave-fill', label: '请假应用(面)', type: 'solid' },
+  { name: 'app-paid-fill', label: '薪酬应用(面)', type: 'solid' },
+  { name: 'app-events-fill', label: '事件应用(面)', type: 'solid' },
+  { name: 'app-report-fill', label: '报表应用(面)', type: 'solid' },
+  { name: 'app-wiki-fill', label: '知识应用(面)', type: 'solid' },
+  { name: 'app-testhub-fill', label: '测试应用(面)', type: 'solid' },
+  { name: 'app-task-fill', label: '任务应用(面)', type: 'solid' },
 
 ];
 
@@ -953,6 +1122,13 @@ function extractIconsFromPages(pagesData) {
         if (FULL_ICON_POOL[i].name.indexOf(noNumber) >= 0) return FULL_ICON_POOL[i];
       }
     }
+    // 尝试把空格变成短横线匹配
+    var withHyphen = n.replace(/\s+/g, '-');
+    if (withHyphen !== n) {
+      for (var i = 0; i < FULL_ICON_POOL.length; i++) {
+        if (FULL_ICON_POOL[i].name === withHyphen) return FULL_ICON_POOL[i];
+      }
+    }
     return null;
   }
 
@@ -1026,15 +1202,22 @@ function extractIconsFromPages(pagesData) {
           }
         }
       }
+      // 尝试用短横线连接所有关键词匹配（处理 "cascade multiple choice" → "cascade-multiple-choice"）
+      if (!matched && keywords.length >= 2) {
+        var joined = keywords.join('-');
+        for (var pi = 0; pi < FULL_ICON_POOL.length; pi++) {
+          if (FULL_ICON_POOL[pi].name === joined || FULL_ICON_POOL[pi].name.indexOf(joined) >= 0) {
+            matched = FULL_ICON_POOL[pi];
+            break;
+          }
+        }
+      }
     }
     if (matched && !usedNames[matched.name]) {
       usedNames[matched.name] = true;
       result.push({ name: matched.name, label: matched.label, type: matched.type });
-    } else if (!usedNames[extracted]) {
-      // 未匹配到 FULL_ICON_POOL → 保留原始图层名称（用 extracted 去重）
-      usedNames[extracted] = true;
-      result.push({ name: extracted || cn, label: cn, type: 'line' });
     }
+    // 不再保留未匹配的图标（过滤掉所有未识别到 FULL_ICON_POOL 的项）
   });
 
   return result;
@@ -1086,40 +1269,71 @@ function extractComponentsFromPages(pagesData) {
   var compMap = {};
   var baseCompMap = {};  // baseName → { count, cat, names[] }
   var COMP_KEYWORDS = ['button','btn','input','card','modal','dialog','table','form','nav','tab','list','item','badge','tag','header','footer','sidebar','menu','dropdown','picker','slider','switch','checkbox','radio','progress','spinner','alert','toast','tooltip','popover','upload','avatar'];
+  // 中文组件类别关键词（用于检测左侧导航类文本/图层）
+  var ZH_COMP_KEYWORDS = ['按钮','表单','导航','容器','展示','反馈','数据','布局','输入','选择','开关','滑块','头像','标签','分页','步骤','进度','提示','弹窗','抽屉','卡片','表格','列表','菜单','下拉'];
 
   pagesData.forEach(function(pageData) {
     if (!pageData || !pageData.layers) return;
     walkLayers(pageData.layers, function(layer) {
       var name = (layer.name || '').trim();
       var nameLower = name.toLowerCase();
-      if (layer._class !== 'symbolInstance' && layer._class !== 'symbolMaster') return;
 
-      // 过滤掉明显的图标/装饰类 symbol（名称为单字符、纯数字、含 "icon/" 路径）
-      if (name.length <= 1 || /^\d+$/.test(nameLower) || nameLower.indexOf('icon/') >= 0) return;
+      // === 策略1：检测 symbolInstance/symbolMaster（原有逻辑） ===
+      if (layer._class === 'symbolInstance' || layer._class === 'symbolMaster') {
+        // 过滤掉明显的图标/装饰类 symbol（名称为单字符、纯数字、含 "icon/" 路径）
+        if (name.length <= 1 || /^\d+$/.test(nameLower) || nameLower.indexOf('icon/') >= 0) return;
 
-      // 提取基名：取 "/" 或 " / " 分隔的第一段
-      var baseName = name.split(/[\/／]/)[0].trim();
-      if (!baseName || baseName.length <= 1) baseName = name;
+        // 提取基名：取 "/" 或 " / " 分隔的第一段
+        var baseName = name.split(/[\/／]/)[0].trim();
+        if (!baseName || baseName.length <= 1) baseName = name;
 
-      // 分词：按 camelCase / PascalCase / 空格 分割
-      var words = baseName.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s_\/-]+/).filter(Boolean);
+        // 分词：按 camelCase / PascalCase / 空格 分割
+        var words = baseName.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s_\/-]+/).filter(Boolean);
 
-      // 检测类别
-      var cat = '组件';
-      for (var k = 0; k < COMP_KEYWORDS.length; k++) {
-        var kw = COMP_KEYWORDS[k];
-        if (nameLower.indexOf(kw) >= 0) {
-          var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',header:'布局',footer:'布局',sidebar:'布局',menu:'导航',dropdown:'表单',slider:'表单',switch:'表单',checkbox:'表单',radio:'表单',progress:'反馈',spinner:'反馈',alert:'反馈',toast:'反馈',tooltip:'反馈',popover:'反馈',upload:'表单',avatar:'展示'};
-          cat = catMap[kw] || '组件';
-          break;
+        // 检测类别
+        var cat = '组件';
+        for (var k = 0; k < COMP_KEYWORDS.length; k++) {
+          var kw = COMP_KEYWORDS[k];
+          if (nameLower.indexOf(kw) >= 0) {
+            var catMap = {button:'按钮',btn:'按钮',input:'表单',card:'容器',modal:'容器',dialog:'容器',table:'数据',form:'表单',tab:'导航',list:'数据',item:'数据',badge:'展示',tag:'标签',header:'布局',footer:'布局',sidebar:'布局',menu:'导航',dropdown:'表单',slider:'表单',switch:'表单',checkbox:'表单',radio:'表单',progress:'反馈',spinner:'反馈',alert:'反馈',toast:'反馈',tooltip:'反馈',popover:'反馈',upload:'表单',avatar:'展示'};
+            cat = catMap[kw] || '组件';
+            break;
+          }
         }
+
+        // 去重：同一基名只保留一个
+        if (!compMap[baseName]) {
+          compMap[baseName] = { name: baseName, category: cat, type: 'symbol', props: baseName, css: '.custom-symbol' };
+        } else if (compMap[baseName].category === '组件' && cat !== '组件') {
+          compMap[baseName].category = cat;
+        }
+        return; // 已处理，不进入下面的文本/组名检测
       }
 
-      // 去重：同一基名只保留一个
-      if (!compMap[baseName]) {
-        compMap[baseName] = { name: baseName, category: cat, type: 'symbol', props: baseName, css: '.custom-symbol' };
-      } else if (compMap[baseName].category === '组件' && cat !== '组件') {
-        compMap[baseName].category = cat;
+      // === 策略2：检测 group 和 text 图层（组件展示页面的左侧导航/分类标题） ===
+      // 只处理组名或文本图层，且名称不包含文件路径特征
+      if (layer._class === 'group' || layer._class === 'text') {
+        if (name.length <= 1 || name.length > 40) return;
+        if (/^\d+$/.test(nameLower)) return;
+        // 过滤 Sketch 自动生成的名称
+        if (/^(path|rectangle|oval|polygon|shape|line|curve|group|symbol|page|artboard|slice)\s*\d*$/i.test(name)) return;
+
+        // 检查是否匹配中文组件类别名（如 "导航", "按钮", "表单" 等）
+        var matchedZh = false;
+        var zhCat = '组件';
+        for (var z = 0; z < ZH_COMP_KEYWORDS.length; z++) {
+          if (name.indexOf(ZH_COMP_KEYWORDS[z]) >= 0) {
+            matchedZh = true;
+            // 映射中文类别
+            var zhCatMap = {'按钮':'按钮','表单':'表单','导航':'导航','容器':'容器','展示':'展示','反馈':'反馈','数据':'数据','布局':'布局','输入':'表单','选择':'表单','开关':'表单','滑块':'表单','头像':'展示','标签':'展示','分页':'导航','步骤':'导航','进度':'反馈','提示':'反馈','弹窗':'容器','抽屉':'容器','卡片':'容器','表格':'数据','列表':'数据','菜单':'导航','下拉':'表单'};
+            zhCat = zhCatMap[ZH_COMP_KEYWORDS[z]] || '组件';
+            break;
+          }
+        }
+
+        if (matchedZh && !compMap[name]) {
+          compMap[name] = { name: name, category: zhCat, type: 'group', props: name, css: '' };
+        }
       }
     });
   });
@@ -1660,17 +1874,21 @@ function renderDetailHTML(ds) {
 }
 
 function renderIconsTab(icons) {
+  if (!icons || icons.length === 0) {
+    return '<section class="ds-section">' +
+      '<div class="ds-section-header">' +
+        '<h3>图标库</h3>' +
+        '<span class="ds-count">0 个图标</span>' +
+        '<div class="ds-search">' +
+          '<input type="text" class="input ds-search-input" id="ds-icon-search" placeholder="搜索图标..." value="' + escapeHTML(dsIconSearch) + '" />' +
+        '</div>' +
+      '</div>' +
+      '<div class="empty-state"><p>未识别到图标</p></div>' +
+    '</section>';
+  }
+
   var cardsHTML = icons.map(function(icon) {
-    var svg = iconSVGMap[icon.name];
-    if (!svg) {
-      // 未匹配的图标名 → 根据名字哈希生成颜色方块缩略图
-      var colors = ['#5B5EF4','#22C55E','#F59E0B','#EF4444','#A855F7','#06B6D4','#8B5CF6'];
-      var ci = Math.abs(seedHash(icon.name || '')) % colors.length;
-      // 取首字母或首字符作为缩略图内的标记
-      var initial = (icon.name || '?').charAt(0).toUpperCase();
-      var swatch = '<svg width="20" height="20" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="4" fill="' + colors[ci] + '" opacity=".85"/><text x="12" y="16" text-anchor="middle" font-size="11" fill="#fff" font-weight="600">' + escapeHTML(initial) + '</text></svg>';
-      svg = swatch;
-    }
+    var svg = iconSVGMap[icon.name] || '';
     // 截断过长的名称
     var displayName = icon.name;
     if (displayName.length > 20) displayName = displayName.slice(0, 18) + '…';

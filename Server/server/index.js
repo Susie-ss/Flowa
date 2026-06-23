@@ -78,6 +78,9 @@ app.use('/', require('./routes/comments'));
 // AI 生成
 app.use('/api/ai', require('./routes/ai'));
 
+// Framo 组件库完整功能（仪表盘/组件库/AI结构化/原型/Sketch解析）
+app.use('/api/framo', require('./routes/framo'));
+
 // 健康检查
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: process.env.DATABASE_URL ? 'postgres' : 'sqlite', vercel: isVercel });

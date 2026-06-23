@@ -3543,3 +3543,102 @@ button {
   min-height: 0;
 }
 
+/* ===== Framo 风格新增样式 ===== */
+
+/* DS Stats bar */
+.ds-stats {
+  display: flex; gap: 16px; align-items: center;
+  flex-wrap: wrap;
+}
+.ds-stats span {
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--bg); padding: 4px 12px;
+  border-radius: 20px; white-space: nowrap;
+}
+.ds-stats strong { color: var(--text); font-weight: 600; }
+
+/* Colors tab */
+.colors-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px; padding: 20px;
+}
+.color-card {
+  background: var(--surface); border-radius: var(--radius-sm);
+  overflow: hidden; border: 1px solid var(--border);
+  transition: box-shadow 0.15s;
+}
+.color-card:hover { box-shadow: var(--shadow); }
+.color-swatch-large {
+  height: 72px; display: flex; align-items: flex-end;
+  justify-content: center; padding: 8px;
+}
+.color-hex {
+  font-size: 11px; font-weight: 600; font-family: 'SF Mono', monospace;
+  background: rgba(0,0,0,.06); padding: 2px 6px; border-radius: 4px;
+}
+.color-info { padding: 8px 10px; }
+.color-role { font-size: 12px; font-weight: 500; color: var(--text); display: block; }
+.color-rgb { font-size: 10px; color: var(--text-muted); display: block; margin-top: 2px; }
+.color-usage { font-size: 10px; color: var(--primary); display: block; margin-top: 2px; }
+
+/* Tokens tab */
+.tokens-panel {
+  padding: 20px;
+}
+.tokens-list {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 16px;
+}
+.token-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px; background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+.token-key {
+  font-size: 12px; font-weight: 500; color: var(--primary);
+  font-family: 'SF Mono', monospace; min-width: 120px;
+}
+.token-val {
+  font-size: 13px; color: var(--text);
+  display: flex; align-items: center; gap: 6px;
+}
+.token-color-dot {
+  display: inline-block; width: 14px; height: 14px;
+  border-radius: 50%; border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tokens-json {
+  background: #1a1a2e; color: #a5d6ff; padding: 16px;
+  border-radius: var(--radius-sm); font-size: 12px;
+  overflow-x: auto; max-height: 300px;
+}
+
+/* AI 组件引用（Framo 风格） */
+.ai-gen-comp-refs {
+  margin-top: 10px; padding: 10px;
+  background: var(--primary-light); border-radius: var(--radius-sm);
+}
+.ai-gen-comp-refs strong {
+  font-size: 11px; color: var(--primary); display: block;
+  margin-bottom: 6px; font-weight: 600;
+}
+.comp-refs-list {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.comp-ref-item {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 11px;
+}
+.comp-ref-role {
+  background: var(--primary); color: #fff;
+  padding: 1px 6px; border-radius: 4px; font-size: 10px;
+  white-space: nowrap; font-weight: 500;
+}
+.comp-ref-item strong {
+  color: var(--text); font-size: 12px; font-weight: 600;
+  background: none; padding: 0; margin: 0; display: inline;
+}
+.comp-ref-item small {
+  color: var(--text-muted); font-size: 10px;
+}
+

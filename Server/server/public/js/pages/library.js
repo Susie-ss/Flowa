@@ -1813,7 +1813,7 @@ window.showNewLibraryModal = showNewLibraryModal;
 
 // ===== 设计系统详情页 - 4个Tab =====
 
-var currentDSTab = 'icons'; // icons | fonts | components | sizes
+var currentDSTab = 'icons'; // icons | fonts | components | sizes | colors
 var currentDS = null;       // 当前正在查看的设计系统对象
 var dsIconSearch = '';
 var dsIconFilter = 'all'; // all | line | solid
@@ -1951,6 +1951,28 @@ function getDSIcons()   { return (currentDS && currentDS.icons && currentDS.icon
 function getDSFonts()   { return (currentDS && currentDS.fonts && currentDS.fonts.length > 0) ? currentDS.fonts : DEFAULT_FONTS; }
 function getDSComponents() { return (currentDS && currentDS.components && currentDS.components.length > 0) ? currentDS.components : DEFAULT_COMPONENTS; }
 function getDSSizes()  { return (currentDS && currentDS.sizes && currentDS.sizes.length > 0) ? currentDS.sizes : DEFAULT_SIZES; }
+function getDSColors() { return (currentDS && currentDS.colors && currentDS.colors.length > 0) ? currentDS.colors : []; }
+function getDSTokens() {
+  // 从当前设计系统提取标准 token
+  var colors = getDSColors();
+  return {
+    colorPrimary: colors.length > 0 ? colors[0] : '#5B5EF4',
+    colorSecondary: colors.length > 1 ? colors[1] : '#22C55E',
+    colorSurface: '#FFFFFF',
+    borderRadius: (currentDS && currentDS.borderRadius) || '8px',
+    fontSizeBase: 14,
+    spacingBase: 8
+  };
+}
+function getDSStats() {
+  return {
+    icons: (currentDS && currentDS.icons) ? currentDS.icons.length : 0,
+    fonts: (currentDS && currentDS.fonts) ? currentDS.fonts.length : 0,
+    components: (currentDS && currentDS.components) ? currentDS.components.length : 0,
+    colors: (currentDS && currentDS.colors) ? currentDS.colors.length : 0,
+    sizes: (currentDS && currentDS.sizes) ? currentDS.sizes.length : 0
+  };
+}
 
 // ===== 初始化设计系统（必须在所有模板数据定义之后）=====
 designSystems = loadDesignSystems();
@@ -1969,7 +1991,9 @@ function getTabIconSVG(key) {
     icons: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
     fonts: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,7 4,4 20,4 20,7"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="20"/></svg>',
     components: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="20" height="8" rx="1"/></svg>',
-    sizes: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="20" y2="4"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="20" x2="18" y2="20"/></svg>'
+    sizes: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="20" y2="4"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="20" x2="18" y2="20"/></svg>',
+    colors: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>',
+    tokens: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,7 4,4 20,4 20,7"/><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="11" x2="20" y2="11"/><line x1="11" y1="4" x2="11" y2="20"/></svg>'
   };
   return icons[key] || '';
 }
@@ -2010,18 +2034,30 @@ function renderDetailHTML(ds) {
     return matchSearch && matchFilter;
   });
 
-  // 构建 tab 按钮
+  // 构建 tab 按钮（Framo 风格 + 新增 Token/Colors 和 Stats）
   var tabs = [
     { key: 'icons', label: '图标' },
     { key: 'fonts', label: '字体' },
     { key: 'components', label: '组件' },
-    { key: 'sizes', label: '字号' }
+    { key: 'sizes', label: '字号' },
+    { key: 'colors', label: '颜色' },
+    { key: 'tokens', label: 'Token' }
   ];
 
   var tabsHTML = tabs.map(function(tab) {
     return '<button class="ds-tab' + (currentDSTab === tab.key ? ' active' : '') + '" data-dstab="' + tab.key + '">' +
       getTabIconSVG(tab.key) + '<span>' + tab.label + '</span></button>';
   }).join('');
+
+  // 统计信息（Framo asset-stats 风格）
+  var stats = getDSStats();
+  var statsHTML = '<div class="ds-stats">' +
+    '<span><strong>' + stats.components + '</strong> 组件</span>' +
+    '<span><strong>' + stats.icons + '</strong> 图标</span>' +
+    '<span><strong>' + stats.fonts + '</strong> 字体</span>' +
+    '<span><strong>' + stats.colors + '</strong> 颜色</span>' +
+    '<span><strong>' + stats.sizes + '</strong> 字号</span>' +
+  '</div>';
 
   // 根据当前 tab 构建内容
   var contentHTML = '';
@@ -2033,6 +2069,10 @@ function renderDetailHTML(ds) {
     contentHTML = renderComponentsTab();
   } else if (currentDSTab === 'sizes') {
     contentHTML = renderSizesTab();
+  } else if (currentDSTab === 'colors') {
+    contentHTML = renderColorsTab();
+  } else if (currentDSTab === 'tokens') {
+    contentHTML = renderTokensTab();
   }
 
   return '<div class="ds-detail">' +
@@ -2044,7 +2084,8 @@ function renderDetailHTML(ds) {
           '<h2>' + escapeHTML(dsName) + '</h2>' +
           '<p class="text-muted">' + dsDesc + '</p>' +
         '</div>' +
-      '</div>' +
+      '</div>' + statsHTML + 
+    '</div>' +
       '<div class="ds-header-actions">' +
         '<button class="btn btn-ghost" onclick="renameDesignSystem(\'' + ds.id + '\')" title="重命名">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
@@ -2264,6 +2305,71 @@ function renderSizesTab() {
     '</table></div></section>';
 }
 
+// ===== 颜色 Tab（Framo 风格）=====
+function renderColorsTab() {
+  var colors = getDSColors();
+  if (!colors || colors.length === 0) {
+    return '<section class="ds-section"><div class="ds-section-header"><h3>颜色</h3><span class="ds-count">0 个颜色</span></div><div class="empty-state"><p>该组件库没有颜色数据</p></div></section>';
+  }
+  var cardsHTML = colors.map(function(hex, i) {
+    var rgb = '';
+    // 尝试解析 hex → rgb
+    var simpleHex = hex.replace('#', '');
+    if (simpleHex.length === 6) {
+      var r = parseInt(simpleHex.slice(0,2), 16);
+      var g = parseInt(simpleHex.slice(2,4), 16);
+      var b = parseInt(simpleHex.slice(4,6), 16);
+      if (!isNaN(r)) rgb = r + ',' + g + ',' + b;
+    }
+    var isLight = false;
+    if (rgb) {
+      var parts = rgb.split(',');
+      var lum = (parseInt(parts[0]) * 299 + parseInt(parts[1]) * 587 + parseInt(parts[2]) * 114) / 1000;
+      isLight = lum > 180;
+    }
+    var role = i === 0 ? 'Primary' : i === 1 ? 'Secondary' : i === 2 ? 'Accent' : i <= 4 ? 'Semantic' : 'Extended';
+    var usage = i === 0 ? '主色/品牌色' : i === 1 ? '辅助色/成功' : i === 2 ? '强调色/警告' : i <= 4 ? '状态色/错误' : '';
+    return '<div class="color-card">' +
+      '<div class="color-swatch-large" style="background:' + hex + ';' + (isLight ? 'border:1px solid #e8eaef' : '') + '">' +
+        '<span class="color-hex" style="color:' + (isLight ? '#333' : '#fff') + '">' + escapeHTML(hex) + '</span>' +
+      '</div>' +
+      '<div class="color-info">' +
+        '<span class="color-role">' + escapeHTML(role) + '</span>' +
+        (rgb ? '<span class="color-rgb">RGB ' + rgb + '</span>' : '') +
+        (usage ? '<span class="color-usage">' + escapeHTML(usage) + '</span>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header"><h3>颜色调色板</h3><span class="ds-count">' + colors.length + ' 个颜色</span></div>' +
+    '<div class="colors-grid">' + cardsHTML + '</div>' +
+  '</section>';
+}
+
+// ===== Token Tab（Framo 风格）=====
+function renderTokensTab() {
+  var tokens = getDSTokens();
+  var stats = getDSStats();
+  var tokenHTML = Object.keys(tokens).map(function(key) {
+    var val = tokens[key];
+    var isColor = typeof val === 'string' && val.indexOf('#') === 0;
+    var display = isColor ? '<span class="token-color-dot" style="background:' + val + '"></span>' + val : val;
+    return '<div class="token-row">' +
+      '<code class="token-key">' + escapeHTML(key) + '</code>' +
+      '<span class="token-val">' + display + '</span>' +
+    '</div>';
+  }).join('');
+
+  return '<section class="ds-section">' +
+    '<div class="ds-section-header"><h3>Design Tokens</h3><span class="ds-count">' + Object.keys(tokens).length + ' 个 Token</span></div>' +
+    '<div class="tokens-panel">' +
+      '<div class="tokens-list">' + tokenHTML + '</div>' +
+      '<pre class="tokens-json">' + escapeHTML(JSON.stringify(tokens, null, 2)) + '</pre>' +
+    '</div>' +
+  '</section>';
+}
+
 // 绑定详情页事件
 function bindDetailEvents() {
   // 返回按钮 - 同时恢复 header 右侧被隐藏的按钮
@@ -2300,6 +2406,10 @@ function bindDetailEvents() {
           contentEl.innerHTML = renderComponentsTab();
         } else if (currentDSTab === 'sizes') {
           contentEl.innerHTML = renderSizesTab();
+        } else if (currentDSTab === 'colors') {
+          contentEl.innerHTML = renderColorsTab();
+        } else if (currentDSTab === 'tokens') {
+          contentEl.innerHTML = renderTokensTab();
         }
         // 更新 tab 状态
         document.querySelectorAll('.ds-tab').forEach(function(t) {

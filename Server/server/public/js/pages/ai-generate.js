@@ -160,15 +160,50 @@ function aiGenSendMessage() {
   }, 800 + Math.random() * 700);
 }
 
-// ===== AI 响应生成（含预览） =====
+// ===== AI 响应生成（含预览 + Framo 结构化布局 + 组件引用） =====
 function generateAIResponse(prompt, dsId, dsName) {
   var styleLabel = dsName ? '（风格: ' + dsName + '）' : '（无风格参考）';
+
+  // 获取设计系统数据
+  var ds = null;
+  var dsList = window.designSystems || [];
+  for (var i = 0; i < dsList.length; i++) {
+    if (dsList[i].id === dsId) { ds = dsList[i]; break; }
+  }
+
+  // 提取 tokens（Framo normalizeTokens 风格）
+  var tokens = {
+    colorPrimary: (ds && ds.colors && ds.colors.length > 0) ? ds.colors[0] : '#5B5EF4',
+    colorSecondary: (ds && ds.colors && ds.colors.length > 1) ? ds.colors[1] : '#22C55E',
+    borderRadius: '8px',
+    fontSizeBase: 14,
+    spacingBase: 8
+  };
 
   // 生成预览 HTML
   var previewHTML = generatePreviewHTML(prompt, dsId);
   updatePreview(previewHTML);
 
-  // 统计生成的页面/组件数
+  // Framo 风格：生成结构化布局和组件引用
+  var analysis = analyzePrompt(prompt);
+  var theme = AI_THEMES[analysis.theme];
+  var topic = analysis.topic || prompt.slice(0, Math.min(10, prompt.length));
+
+  // 组件引用（Framo buildLayout → componentReferences 风格）
+  var comps = (ds && ds.components) || [];
+  var compNames = comps.slice(0, 6).map(function(c) { return c.name; });
+  var references = [
+    { role: '页面容器', component: compNames[0] || 'container', reason: '作为页面结构容器' },
+    { role: '数据摘要', component: compNames[1] || 'stat-card', reason: '承载关键指标' },
+    { role: '内容面板', component: compNames[2] || 'table', reason: '展示主要业务数据' },
+    { role: '操作入口', component: compNames[3] || 'button', reason: '提供主操作入口' }
+  ].filter(function(r) { return r.component; });
+
+  var refsHTML = references.map(function(ref) {
+    return '<div class="comp-ref-item"><span class="comp-ref-role">' + escapeHTML(ref.role) + '</span><strong>' + escapeHTML(ref.component) + '</strong><small>' + escapeHTML(ref.reason) + '</small></div>';
+  }).join('');
+
+  // 统计生成的页面/模块数
   var sections = [];
   if (prompt.indexOf('表格') >= 0 || prompt.indexOf('数据') >= 0 || prompt.indexOf('看板') >= 0) sections.push('数据表格');
   if (prompt.indexOf('图表') >= 0 || prompt.indexOf('折线') >= 0 || prompt.indexOf('饼图') >= 0) sections.push('图表');
@@ -179,7 +214,7 @@ function generateAIResponse(prompt, dsId, dsName) {
   if (prompt.indexOf('按钮') >= 0) sections.push('按钮组');
   if (sections.length === 0) sections = ['页面布局', '组件模块'];
 
-  // 额外信息（预览缩略图按钮 + 页面列表）
+  // 额外信息（预览导航 + 组件引用 + 结构化 JSON）
   var extraHTML =
     '<div class="ai-gen-preview-pages">' +
       '<span class="ai-gen-page-badge" onclick="scrollPreviewTo(\'page-header\')">页面标题</span>' +
@@ -187,13 +222,16 @@ function generateAIResponse(prompt, dsId, dsName) {
         return '<span class="ai-gen-page-badge" onclick="scrollPreviewTo(\'' + s + '\')">' + s + '</span>';
       }).join('') +
     '</div>' +
+    '<div class="ai-gen-comp-refs"><strong>引用的组件:</strong>' +
+      '<div class="comp-refs-list">' + refsHTML + '</div>' +
+    '</div>' +
     '<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">' +
-      '包含 ' + sections.length + ' 个模块 · 可在右侧预览区查看' +
+      '包含 ' + sections.length + ' 个模块 · Token: ' + tokens.colorPrimary + ' · ' + tokens.colorSecondary +
     '</div>';
 
   return {
     type: 'bot',
-    text: '已根据你的描述生成了原型界面' + styleLabel + '，右侧为预览效果。你可以继续补充描述来调整内容。',
+    text: '已根据你的描述生成了原型界面' + styleLabel + '，右侧为预览效果。',
     extra: extraHTML
   };
 }

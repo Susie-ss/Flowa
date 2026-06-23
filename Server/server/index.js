@@ -31,6 +31,13 @@ app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// 文件上传中间件（供 Framo Sketch 解析使用）
+app.use(require('express-fileupload')({
+  limits: { fileSize: 200 * 1024 * 1024 },
+  abortOnLimit: true,
+  useTempFiles: false
+}));
+
 // 请求日志（Vercel 上跳过，使用 Vercel 自带的 monitoring）
 if (!isVercel) {
   app.use('/api', (req, res, next) => {
